@@ -7,10 +7,15 @@ Rectangle {
     property var utils
     property var theme
     readonly property bool hovered: hover.hovered
+    property bool hasPrevious: false
+    property bool hasNext: false
 
     signal openRequested()
     signal fullscreenRequested()
     signal audioMenuRequested()
+    signal previousRequested()
+    signal nextRequested()
+    signal playlistRequested()
     signal subtitleMenuRequested()
 
     height: 96
@@ -50,6 +55,8 @@ Rectangle {
                     emphasized: true
                     onClicked: bar.video.hasMedia ? bar.video.togglePause() : bar.openRequested()
                 }
+                IconButton { theme: bar.theme; glyph: "⏮"; enabled: bar.hasPrevious; onClicked: bar.previousRequested() }
+                IconButton { theme: bar.theme; glyph: "⏭"; enabled: bar.hasNext; onClicked: bar.nextRequested() }
                 IconButton { theme: bar.theme; glyph: "−10"; onClicked: bar.video.seekRelative(-10) }
                 IconButton { theme: bar.theme; glyph: "+10"; onClicked: bar.video.seekRelative(10) }
 
@@ -95,6 +102,7 @@ Rectangle {
                 }
 
                 IconButton { theme: bar.theme; glyph: "◉"; onClicked: bar.video.screenshot() }
+                IconButton { theme: bar.theme; glyph: "☰"; onClicked: bar.playlistRequested() }
                 IconButton { theme: bar.theme; glyph: "⏏"; onClicked: bar.openRequested() }
                 IconButton { theme: bar.theme; glyph: "⤢"; onClicked: bar.fullscreenRequested() }
             }

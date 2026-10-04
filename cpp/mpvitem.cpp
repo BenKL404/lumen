@@ -150,6 +150,7 @@ MpvItem::MpvItem(QQuickItem *parent) : QQuickFramebufferObject(parent)
     mpv_observe_property(m_mpv, 0, "media-title", MPV_FORMAT_STRING);
     mpv_observe_property(m_mpv, 0, "track-list", MPV_FORMAT_NODE);
     mpv_observe_property(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(m_mpv, 0, "eof-reached", MPV_FORMAT_FLAG);
 
     mpv_set_wakeup_callback(m_mpv, onMpvWakeup, this);
 
@@ -226,6 +227,12 @@ void MpvItem::handlePropertyChange(const mpv_event_property *prop)
     } else if (std::strcmp(name, "sub-delay") == 0 && available) {
         m_subDelay = *static_cast<double *>(prop->data);
         emit subDelayChanged();
+    } else if (std::strcmp(name, "eof-reached") == 0) {
+        const bool reached = available && *static_cast<int *>(prop->data) != 0;
+        if (reached != m_eofReached) {
+            m_eofReached = reached;
+            emit eofReachedChanged();
+        }
     }
 }
 

@@ -116,6 +116,8 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | J | Changer de sous-titres |
 | A | Changer de piste audio |
 | Z / X | Décaler les sous-titres de −0,1 s / +0,1 s |
+| Page préc. / Page suiv. | Fichier précédent / suivant de la playlist |
+| F6 | Afficher / masquer la playlist |
 
 ---
 

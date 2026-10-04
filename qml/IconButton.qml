@@ -11,6 +11,7 @@ Item {
 
     implicitWidth: Math.max(38, label.implicitWidth + 18)
     implicitHeight: 38
+    opacity: enabled ? 1 : 0.35
 
     Rectangle {
         anchors.fill: parent
