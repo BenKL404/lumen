@@ -12,6 +12,7 @@ Rectangle {
     property bool hasNext: false
     property int repeatMode: 0 // 0 désactivé, 1 le fichier, 2 la playlist
     property bool shuffle: false
+    property var bookmarks: []
     // Clic sur la durée : afficher le temps restant (comme PotPlayer)
     property bool showRemaining: false
     readonly property bool hovered: hover.hovered
@@ -39,6 +40,7 @@ Rectangle {
     signal playlistRequested()
     signal repeatRequested()
     signal shuffleRequested()
+    signal abLoopClearRequested()
     signal settingsRequested(Item anchor)
 
     height: 84
@@ -72,6 +74,10 @@ Rectangle {
                 to: bar.video.duration
                 enabled: bar.video.hasMedia
                 tooltipFormatter: (seconds) => bar.utils.formatClock(seconds)
+                chapters: bar.video.chapters
+                bookmarks: bar.bookmarks
+                loopA: bar.video.abLoopA
+                loopB: bar.video.abLoopB
                 onMoved: (seconds) => bar.video.seekAbsolute(seconds)
             }
 
@@ -162,6 +168,35 @@ Rectangle {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: bar.showRemaining = !bar.showRemaining
+                        }
+                    }
+
+                    Item { width: 10; height: 1; visible: bar.video.abLoopA >= 0 }
+
+                    // Boucle A-B active : « A » puis « A-B » ; un clic la retire
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: bar.video.abLoopA >= 0
+                        width: abText.implicitWidth + 12
+                        height: 20
+                        radius: 4
+                        color: abArea.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        border.color: bar.theme.accent
+
+                        Text {
+                            id: abText
+                            anchors.centerIn: parent
+                            text: bar.video.abLoopB >= 0 ? "A-B" : "A"
+                            color: bar.theme.accent
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                        }
+                        MouseArea {
+                            id: abArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: bar.abLoopClearRequested()
                         }
                     }
                 }

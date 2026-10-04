@@ -143,6 +143,8 @@ Window {
                 { label: "Précédent", icon: "skip-back", shortcut: "PgUp", enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
                 { label: "Suivant", icon: "skip-forward", shortcut: "PgDn", enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
                 { separator: true },
+                { label: root.abLoopLabel(), icon: "repeat", shortcut: "L", checked: video.abLoopB >= 0, action: () => root.cycleAbLoop() },
+                { separator: true },
                 { label: "Lecture aléatoire", icon: "shuffle", shortcut: "H", checked: playlist.shuffle, action: () => root.toggleShuffle() },
                 { label: "Ne pas répéter", checked: playlist.repeatMode === 0, action: () => root.setRepeat(0) },
                 { label: "Répéter le fichier", checked: playlist.repeatMode === 1, action: () => root.setRepeat(1) },
@@ -155,6 +157,30 @@ Window {
                 { label: "Image précédente", shortcut: ",", action: () => video.frameStep(false) },
                 { label: "Image suivante", shortcut: ".", action: () => video.frameStep(true) }
             ] },
+            { label: "Chapitres", icon: "list", enabled: has && video.chapters.length > 0, submenu:
+                video.chapters.map((c, i) => ({
+                    label: (i + 1) + ". " + (c.title || "Chapitre " + (i + 1)),
+                    // Arrondi : les débuts de chapitre MKV tombent souvent juste avant la seconde
+                    shortcut: utils.formatTime(Math.round(c.time)),
+                    checked: i === video.chapter,
+                    action: () => root.goToChapter(i)
+                })).concat([
+                    { separator: true },
+                    { label: "Chapitre précédent", shortcut: "Ctrl+PgUp", action: () => root.stepChapter(-1) },
+                    { label: "Chapitre suivant", shortcut: "Ctrl+PgDn", action: () => root.stepChapter(1) }
+                ])
+            },
+            { label: "Signets", icon: "pin", enabled: has, submenu:
+                [{ label: "Ajouter un signet ici", icon: "plus", shortcut: "B", action: () => root.addBookmark() }]
+                .concat(root.bookmarks.length > 0 ? [{ separator: true }] : [],
+                        root.bookmarks.map((t, i) => ({
+                            label: "Signet " + (i + 1), shortcut: utils.formatTime(t),
+                            action: () => video.seekAbsolute(t)
+                        })),
+                        root.bookmarks.length > 0
+                            ? [{ separator: true }, { label: "Supprimer tous les signets", icon: "trash", action: () => root.clearBookmarks() }]
+                            : [])
+            },
             { label: "Vitesse", icon: "gauge", enabled: has, submenu:
                 [0.5, 0.75, 1, 1.25, 1.5, 2].map(v => ({
                     label: v === 1 ? "×1 (normale)" : "×" + String(v).replace(".", ","),
@@ -197,6 +223,78 @@ Window {
             { separator: true },
             { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
         ]
+    }
+
+    // ------------------------------------------- Chapitres, signets, boucle A-B
+    property var bookmarks: []
+
+    function refreshBookmarks() {
+        bookmarks = currentUrl !== "" ? history.bookmarks(currentUrl) : []
+    }
+
+    function addBookmark() {
+        if (currentUrl === "")
+            return
+        history.addBookmark(currentUrl, video.position)
+        refreshBookmarks()
+        osd("Signet ajouté à " + utils.formatTime(video.position))
+    }
+
+    function clearBookmarks() {
+        history.clearBookmarks(currentUrl)
+        refreshBookmarks()
+        osd("Signets supprimés")
+    }
+
+    function goToChapter(index) {
+        const chapters = video.chapters
+        if (index < 0 || index >= chapters.length)
+            return
+        video.command(["set", "chapter", String(index)])
+        osd("Chapitre " + (index + 1) + (chapters[index].title ? " : " + chapters[index].title : ""))
+    }
+
+    function stepChapter(step) {
+        if (video.chapters.length === 0)
+            return
+        // Reculer pendant les premières secondes d'un chapitre ramène au précédent,
+        // sinon au début du chapitre en cours (comme les pistes d'un CD)
+        let index = video.chapter + step
+        if (step < 0 && video.chapter >= 0
+                && video.position - video.chapters[video.chapter].time > 3)
+            index = video.chapter
+        goToChapter(Math.max(0, Math.min(video.chapters.length - 1, index)))
+    }
+
+    // Premier appui : début A ; deuxième : fin B (la boucle démarre) ; troisième : désactivée
+    function cycleAbLoop() {
+        if (!video.hasMedia)
+            return
+        if (video.abLoopA < 0) {
+            video.command(["set", "ab-loop-a", String(video.position)])
+            osd("Boucle : début A à " + utils.formatTime(video.position))
+        } else if (video.abLoopB < 0) {
+            let a = video.abLoopA, b = video.position
+            if (b < a)
+                [a, b] = [b, a]
+            video.command(["set", "ab-loop-a", String(a)])
+            video.command(["set", "ab-loop-b", String(b)])
+            osd("Boucle A-B : " + utils.formatTime(a) + " → " + utils.formatTime(b))
+        } else {
+            clearAbLoop()
+        }
+    }
+
+    function clearAbLoop() {
+        video.command(["set", "ab-loop-a", "no"])
+        video.command(["set", "ab-loop-b", "no"])
+        osd("Boucle A-B désactivée")
+    }
+
+    function abLoopLabel() {
+        return video.abLoopA < 0 ? "Boucle A-B : définir le début (A)"
+             : video.abLoopB < 0 ? "Boucle A-B : définir la fin (B)"
+             : "Désactiver la boucle A-B"
     }
 
     function openContextMenu(item, x, y) {
@@ -340,6 +438,7 @@ Window {
         saveProgress()
         currentUrl = ""
         pendingUrl = ""
+        bookmarks = []
         resumeBox.hide()
         video.stop()
     }
@@ -494,6 +593,12 @@ Window {
             onFileLoaded: {
                 root.currentUrl = root.pendingUrl
                 saveTimer.restart()
+                root.refreshBookmarks()
+                // La boucle A-B est un réglage global de mpv : ne pas la garder d'un fichier à l'autre
+                if (video.abLoopA >= 0 || video.abLoopB >= 0) {
+                    video.command(["set", "ab-loop-a", "no"])
+                    video.command(["set", "ab-loop-b", "no"])
+                }
                 root.resume()
             }
         }
@@ -708,6 +813,8 @@ Window {
         shuffle: playlist.shuffle
         onRepeatRequested: root.cycleRepeat()
         onShuffleRequested: root.toggleShuffle()
+        bookmarks: root.bookmarks
+        onAbLoopClearRequested: root.clearAbLoop()
         onSettingsRequested: (anchor) => {
             trackMenu.visible = false
             appMenu.popup(anchor, true)
@@ -878,6 +985,10 @@ Window {
     Shortcut { sequence: "O"; onActivated: fileDialog.open() }
     Shortcut { sequence: "Ctrl+O"; onActivated: folderDialog.open() }
     Shortcut { sequence: "R"; onActivated: root.cycleRepeat() }
+    Shortcut { sequence: "L"; onActivated: root.cycleAbLoop() }
+    Shortcut { sequence: "B"; onActivated: root.addBookmark() }
+    Shortcut { sequence: "Ctrl+PgUp"; onActivated: root.stepChapter(-1) }
+    Shortcut { sequence: "Ctrl+PgDown"; onActivated: root.stepChapter(1) }
     Shortcut { sequence: "H"; onActivated: root.toggleShuffle() }
     Shortcut { sequence: "S"; onActivated: root.screenshot() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: root.close() }

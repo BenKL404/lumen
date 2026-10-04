@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <QtCore/QTimer>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/qguiapplication_platform.h>
@@ -159,6 +160,11 @@ MpvItem::MpvItem(QQuickItem *parent) : QQuickFramebufferObject(parent)
     mpv_observe_property(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "eof-reached", MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, 0, "mute", MPV_FORMAT_FLAG);
+    mpv_observe_property(m_mpv, 0, "chapter-list", MPV_FORMAT_NODE);
+    mpv_observe_property(m_mpv, 0, "chapter", MPV_FORMAT_INT64);
+    // « no » ou un nombre : lus comme nœuds pour distinguer les deux
+    mpv_observe_property(m_mpv, 0, "ab-loop-a", MPV_FORMAT_NODE);
+    mpv_observe_property(m_mpv, 0, "ab-loop-b", MPV_FORMAT_NODE);
     for (const char *name : kInfoProperties)
         mpv_observe_property(m_mpv, 0, name, MPV_FORMAT_NODE);
 
@@ -241,6 +247,19 @@ void MpvItem::handlePropertyChange(const mpv_event_property *prop)
             m_eofReached = reached;
             emit eofReachedChanged();
         }
+    } else if (std::strcmp(name, "chapter-list") == 0) {
+        m_chapters = available && prop->format == MPV_FORMAT_NODE
+            ? nodeToVariant(static_cast<mpv_node *>(prop->data)).toList()
+            : QVariantList();
+        emit chaptersChanged();
+    } else if (std::strcmp(name, "chapter") == 0) {
+        m_chapter = available ? static_cast<int>(*static_cast<int64_t *>(prop->data)) : -1;
+        emit chapterChanged();
+    } else if (std::strcmp(name, "ab-loop-a") == 0 || std::strcmp(name, "ab-loop-b") == 0) {
+        const auto *node = available && prop->format == MPV_FORMAT_NODE ? static_cast<mpv_node *>(prop->data) : nullptr;
+        const double value = node && node->format == MPV_FORMAT_DOUBLE ? node->u.double_ : -1.0;
+        (name[8] == 'a' ? m_abLoopA : m_abLoopB) = value;
+        emit abLoopChanged();
     } else if (std::strcmp(name, "mute") == 0 && available) {
         m_muted = *static_cast<int *>(prop->data) != 0;
         emit mutedChanged();
@@ -299,7 +318,19 @@ void MpvItem::onRenderReady()
 void MpvItem::loadFile(const QUrl &url)
 {
     if (!m_renderReady) {
+        // Normalement chargé dès que le contexte de rendu existe (onRenderReady). S'il
+        // n'arrive pas (pas d'OpenGL), charger quand même : le son et les métadonnées
+        // fonctionnent, seule l'image manque.
         m_pendingLoad = url;
+        QTimer::singleShot(2000, this, [this] {
+            if (m_renderReady || m_pendingLoad.isEmpty())
+                return;
+            qWarning("Lumen : rendu vidéo indisponible, lecture sans image");
+            m_renderReady = true;
+            // Sans sortie vidéo, mpv bloquerait sur la piste vidéo : la désactiver
+            command({QStringLiteral("set"), QStringLiteral("vid"), QStringLiteral("no")});
+            loadFile(std::exchange(m_pendingLoad, QUrl()));
+        });
         return;
     }
     const QString target = url.isLocalFile() ? url.toLocalFile() : url.toString();
