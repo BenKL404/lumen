@@ -8,13 +8,14 @@ fn main() {
         // Interface QML + objets Rust exposés à QML
         .qml_module(QmlModule {
             uri: "com.lumen.player",
-            rust_files: &["src/bridge/utils.rs", "src/bridge/history.rs"],
+            rust_files: &["src/bridge/utils.rs", "src/bridge/history.rs", "src/bridge/playlist.rs"],
             qml_files: &[
                 "qml/Main.qml",
                 "qml/ControlBar.qml",
                 "qml/IconButton.qml",
                 "qml/SeekBar.qml",
                 "qml/TrackMenu.qml",
+                "qml/PlaylistPanel.qml",
             ],
             ..Default::default()
         })

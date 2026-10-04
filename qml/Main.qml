@@ -35,6 +35,9 @@ Window {
     property string currentUrl: ""
     property string pendingUrl: ""
 
+    readonly property bool hasPrevious: playlist.current > 0
+    readonly property bool hasNext: playlist.current + 1 < playlist.items.length
+
     function wake() {
         controlsVisible = true
         hideTimer.restart()
@@ -54,9 +57,15 @@ Window {
         saveProgress()
         currentUrl = ""
         pendingUrl = url.toString()
+        playlist.load(pendingUrl)
         resumeBox.hide()
         video.loadFile(url)
         osd(utils.fileName(pendingUrl))
+    }
+
+    function playAt(index) {
+        if (index >= 0 && index < playlist.items.length && index !== playlist.current)
+            openUrl(playlist.items[index])
     }
 
     function selectedTrack(type) {
@@ -124,6 +133,7 @@ Window {
 
     Utils { id: utils }
     History { id: history }
+    Playlist { id: playlist }
 
     // ---------------------------------------------------------------- Vidéo
     MpvVideo {
@@ -134,6 +144,8 @@ Window {
             if (paused)
                 root.saveProgress()
         }
+        // Fin de la vidéo : enchaîner sur la suivante de la playlist
+        onEofReachedChanged: if (eofReached && root.hasNext) root.playAt(playlist.current + 1)
         onFileLoaded: {
             root.currentUrl = root.pendingUrl
             saveTimer.restart()
@@ -202,7 +214,7 @@ Window {
         id: hideTimer
         interval: 2500
         onTriggered: {
-            if (video.hasMedia && !video.paused && !controls.hovered && !trackMenu.visible)
+            if (video.hasMedia && !video.paused && !controls.hovered && !trackMenu.visible && !playlistPanel.open)
                 root.controlsVisible = false
         }
     }
@@ -244,14 +256,22 @@ Window {
         onFullscreenRequested: root.toggleFullScreen()
         onAudioMenuRequested: root.toggleTrackMenu("audio")
         onSubtitleMenuRequested: root.toggleTrackMenu("sub")
+        hasPrevious: root.hasPrevious
+        hasNext: root.hasNext
+        onPreviousRequested: root.playAt(playlist.current - 1)
+        onNextRequested: root.playAt(playlist.current + 1)
+        onPlaylistRequested: playlistPanel.open = !playlistPanel.open
     }
 
     // ------------------------------------------------ Menu des pistes
-    // Un clic en dehors du menu le ferme (sans mettre la vidéo en pause)
+    // Un clic en dehors du menu ou du panneau les ferme (sans mettre la vidéo en pause)
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible
-        onClicked: trackMenu.visible = false
+        enabled: trackMenu.visible || playlistPanel.open
+        onClicked: {
+            trackMenu.visible = false
+            playlistPanel.open = false
+        }
     }
 
     TrackMenu {
@@ -265,6 +285,20 @@ Window {
             trackMenu.visible = false
             subtitleDialog.open()
         }
+    }
+
+    // ------------------------------------------------------------- Playlist
+    PlaylistPanel {
+        id: playlistPanel
+        anchors { top: parent.top; bottom: parent.bottom }
+        width: Math.min(380, root.width * 0.4)
+        x: open ? root.width - width : root.width
+        visible: x < root.width
+        Behavior on x { NumberAnimation { duration: theme.animation; easing.type: Easing.OutCubic } }
+        playlist: playlist
+        utils: utils
+        theme: root.theme
+        onActivated: (index) => root.playAt(index)
     }
 
     // ------------------------------------------------------------- OSD
@@ -421,6 +455,8 @@ Window {
         onActivated: {
             if (trackMenu.visible)
                 trackMenu.visible = false
+            else if (playlistPanel.open)
+                playlistPanel.open = false
             else if (root.visibility === Window.FullScreen)
                 root.visibility = Window.Windowed
         }
@@ -439,6 +475,9 @@ Window {
     }
     Shortcut { sequence: "Backspace"; onActivated: { video.speed = 1.0; root.osd("Vitesse normale") } }
     Shortcut { sequence: "J"; onActivated: { video.command(["cycle", "sub"]); root.osd("Sous-titres suivants") } }
+    Shortcut { sequence: "PgDown"; onActivated: root.playAt(playlist.current + 1) }
+    Shortcut { sequence: "PgUp"; onActivated: root.playAt(playlist.current - 1) }
+    Shortcut { sequence: "F6"; onActivated: playlistPanel.open = !playlistPanel.open }
     Shortcut { sequence: "Z"; onActivated: root.shiftSubDelay(-0.1) }
     Shortcut { sequence: "X"; onActivated: root.shiftSubDelay(0.1) }
     Shortcut { sequence: "A"; onActivated: { video.command(["cycle", "audio"]); root.osd("Piste audio suivante") } }

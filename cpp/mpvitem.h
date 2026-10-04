@@ -24,6 +24,8 @@ class MpvItem : public QQuickFramebufferObject
     // Pistes du fichier (propriété mpv « track-list ») : id, type, title, lang, codec, selected…
     Q_PROPERTY(QVariantList tracks READ tracks NOTIFY tracksChanged)
     Q_PROPERTY(double subDelay READ subDelay WRITE setSubDelay NOTIFY subDelayChanged)
+    // Vrai quand la lecture est arrivée au bout (keep-open : mpv reste sur la dernière image)
+    Q_PROPERTY(bool eofReached READ eofReached NOTIFY eofReachedChanged)
 
 public:
     explicit MpvItem(QQuickItem *parent = nullptr);
@@ -40,6 +42,7 @@ public:
     bool hasMedia() const { return m_hasMedia; }
     QVariantList tracks() const { return m_tracks; }
     double subDelay() const { return m_subDelay; }
+    bool eofReached() const { return m_eofReached; }
 
     void setPaused(bool paused);
     void setVolume(double volume);
@@ -65,6 +68,7 @@ signals:
     void hasMediaChanged();
     void tracksChanged();
     void subDelayChanged();
+    void eofReachedChanged();
     void fileLoaded();
     void endOfFile();
 
@@ -88,6 +92,7 @@ private:
     bool m_hasMedia = false;
     QVariantList m_tracks;
     double m_subDelay = 0.0;
+    bool m_eofReached = false;
 };
 
 // Appelé depuis Rust avant la création de la fenêtre.

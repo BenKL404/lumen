@@ -169,6 +169,8 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | J                 | Piste de sous-titres suivante |
 | A                 | Piste audio suivante          |
 | Z / X             | Décalage sous-titres ∓0,1 s   |
+| PgUp / PgDn       | Fichier précédent / suivant   |
+| F6                | Afficher / masquer la playlist |
 
 ---
 
