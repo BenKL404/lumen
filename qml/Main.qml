@@ -64,6 +64,122 @@ Window {
         { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
     ]
 
+    // Réglages d'image non observés côté mpv : suivis ici pour cocher le menu
+    property string aspect: "-1"
+    property int rotation: 0
+
+    // Menu clic droit, construit à l'ouverture pour refléter l'état courant
+    function contextEntries() {
+        const has = video.hasMedia
+        const audioTracks = video.tracks.filter(t => t.type === "audio")
+        const subTracks = video.tracks.filter(t => t.type === "sub")
+        const trackEntry = (t, property) => ({
+            label: utils.trackLabel(t.id, t.title || "", t.lang || "", t.codec || "", t["demux-channel-count"] || 0),
+            checked: t.selected === true,
+            action: () => video.command(["set", property, String(t.id)])
+        })
+        const aspectEntry = (label, value) => ({
+            label: label, checked: root.aspect === value,
+            action: () => { root.aspect = value; video.command(["set", "video-aspect-override", value]); root.osd("Format d'image : " + label) }
+        })
+
+        return [
+            { label: "Ouvrir un fichier…", icon: "⏏", shortcut: "O", action: () => fileDialog.open() },
+            { label: "Ajouter à la playlist…", action: () => addDialog.open() },
+            { separator: true },
+            { label: "Lecture", icon: "▶", enabled: has, submenu: [
+                { label: video.paused ? "Lecture" : "Pause", icon: video.paused ? "▶" : "❚❚", shortcut: "Espace", action: () => video.togglePause() },
+                { label: "Arrêter", icon: "■", action: () => root.stop() },
+                { separator: true },
+                { label: "Précédent", icon: "⏮", shortcut: "PgUp", enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
+                { label: "Suivant", icon: "⏭", shortcut: "PgDn", enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
+                { separator: true },
+                { label: "Reculer de 5 s", shortcut: "←", action: () => root.seekBy(-5) },
+                { label: "Avancer de 5 s", shortcut: "→", action: () => root.seekBy(5) },
+                { label: "Reculer de 30 s", shortcut: "Ctrl+←", action: () => root.seekBy(-30) },
+                { label: "Avancer de 30 s", shortcut: "Ctrl+→", action: () => root.seekBy(30) },
+                { label: "Image précédente", shortcut: ",", action: () => video.frameStep(false) },
+                { label: "Image suivante", shortcut: ".", action: () => video.frameStep(true) }
+            ] },
+            { label: "Vitesse", icon: "×", enabled: has, submenu:
+                [0.5, 0.75, 1, 1.25, 1.5, 2].map(v => ({
+                    label: v === 1 ? "×1 (normale)" : "×" + String(v).replace(".", ","),
+                    shortcut: v === 1 ? "Retour arr." : "",
+                    checked: Math.abs(video.speed - v) < 0.01,
+                    action: () => root.setSpeed(v)
+                }))
+            },
+            { label: "Audio", icon: "♪", enabled: has, submenu:
+                (audioTracks.length > 0 ? audioTracks.map(t => trackEntry(t, "aid"))
+                                        : [{ label: "Aucune piste audio", enabled: false }]).concat([
+                { separator: true },
+                { label: "Muet", shortcut: "M", checked: video.muted, action: () => root.toggleMute() },
+                { label: "Augmenter le volume", shortcut: "↑", action: () => root.changeVolume(5) },
+                { label: "Baisser le volume", shortcut: "↓", action: () => root.changeVolume(-5) }
+            ]) },
+            { label: "Sous-titres", icon: "≡", enabled: has, submenu:
+                [{ label: "Désactivés", checked: !subTracks.some(t => t.selected), action: () => video.command(["set", "sid", "no"]) }]
+                .concat(subTracks.map(t => trackEntry(t, "sid")), [
+                { separator: true },
+                { label: "Ajouter un fichier…", action: () => subtitleDialog.open() },
+                { label: "Décaler de −0,1 s", shortcut: "Z", action: () => root.shiftSubDelay(-0.1) },
+                { label: "Décaler de +0,1 s", shortcut: "X", action: () => root.shiftSubDelay(0.1) },
+                { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
+            ]) },
+            { label: "Vidéo", icon: "▣", enabled: has, submenu: [
+                { label: "Plein écran", icon: "⤢", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
+                { label: "Capture d'écran", icon: "◉", shortcut: "S", action: () => root.screenshot() },
+                { separator: true },
+                aspectEntry("Format automatique", "-1"),
+                aspectEntry("16:9", "16:9"),
+                aspectEntry("4:3", "4:3"),
+                aspectEntry("2,35:1", "2.35:1"),
+                { separator: true },
+                { label: "Pivoter de 90°", icon: "↻", checked: root.rotation !== 0, action: () => root.rotate() }
+            ] },
+            { separator: true },
+            { label: "Playlist", icon: "☰", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
+            { label: "Toujours au premier plan", icon: "⚲", checked: root.pinned, action: () => root.pinned = !root.pinned },
+            { separator: true },
+            { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
+        ]
+    }
+
+    function openContextMenu(item, x, y) {
+        trackMenu.visible = false
+        appMenu.close()
+        contextMenu.entries = contextEntries()
+        const p = item.mapToItem(contextMenu.parent, x, y)
+        contextMenu.popupAt(p.x, p.y)
+    }
+
+    function seekBy(seconds) {
+        video.seekRelative(seconds)
+        osd((seconds > 0 ? "+" : "−") + Math.abs(seconds) + " s")
+    }
+
+    function changeVolume(step) {
+        const volume = Math.max(0, Math.min(130, video.volume + step))
+        video.volume = volume
+        osd("Volume " + Math.round(volume) + " %")
+    }
+
+    function toggleMute() {
+        osd(video.muted ? "Son rétabli" : "Muet")
+        video.muted = !video.muted
+    }
+
+    function setSpeed(speed) {
+        video.speed = speed
+        osd(Math.abs(speed - 1) < 0.01 ? "Vitesse normale" : "Vitesse ×" + speed.toFixed(2).replace(/0$/, "").replace(".", ","))
+    }
+
+    function rotate() {
+        rotation = (rotation + 90) % 360
+        video.command(["set", "video-rotate", String(rotation)])
+        osd("Rotation " + rotation + "°")
+    }
+
     function wake() {
         controlsVisible = true
         hideTimer.restart()
@@ -88,7 +204,8 @@ Window {
 
     function closePopups() {
         trackMenu.visible = false
-        appMenu.visible = false
+        appMenu.close()
+        contextMenu.close()
         if (fullscreen)
             playlistPanel.open = false
     }
@@ -212,7 +329,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !trackMenu.visible && !appMenu.visible && !(root.fullscreen && playlistPanel.open))
+                    && !trackMenu.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -284,20 +401,25 @@ Window {
 
         MouseArea {
             anchors.fill: parent
+            id: stageArea
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: root.controlsVisible ? Qt.ArrowCursor : Qt.BlankCursor
 
             onPositionChanged: root.wake()
-            onClicked: clickTimer.restart()
-            onDoubleClicked: {
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton)
+                    root.openContextMenu(stageArea, mouse.x, mouse.y)
+                else
+                    clickTimer.restart()
+            }
+            onDoubleClicked: (mouse) => {
+                if (mouse.button !== Qt.LeftButton)
+                    return
                 clickTimer.stop()
                 root.toggleFullScreen()
             }
-            onWheel: (wheel) => {
-                const step = wheel.angleDelta.y > 0 ? 5 : -5
-                video.volume = video.volume + step
-                root.osd("Volume " + Math.round(Math.max(0, Math.min(130, video.volume + step))) + " %")
-            }
+            onWheel: (wheel) => root.changeVolume(wheel.angleDelta.y > 0 ? 5 : -5)
 
             // Distingue clic simple (pause) et double-clic (plein écran)
             Timer {
@@ -470,7 +592,8 @@ Window {
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible || appMenu.visible || (root.fullscreen && playlistPanel.open)
+        enabled: trackMenu.visible || appMenu.visible || contextMenu.visible || (root.fullscreen && playlistPanel.open)
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
     }
 
@@ -510,6 +633,11 @@ Window {
         id: appMenu
         theme: root.theme
         entries: root.menuEntries
+    }
+
+    AppMenu {
+        id: contextMenu
+        theme: root.theme
     }
 
     // ---------------------------------------- Redimensionnement (sans bordure)
@@ -577,30 +705,20 @@ Window {
 
     // ------------------------------------------------ Raccourcis clavier
     Shortcut { sequence: "Space"; onActivated: video.togglePause() }
-    Shortcut { sequence: "Left"; onActivated: { video.seekRelative(-5); root.osd("−5 s") } }
-    Shortcut { sequence: "Right"; onActivated: { video.seekRelative(5); root.osd("+5 s") } }
-    Shortcut { sequence: "Ctrl+Left"; onActivated: { video.seekRelative(-30); root.osd("−30 s") } }
-    Shortcut { sequence: "Ctrl+Right"; onActivated: { video.seekRelative(30); root.osd("+30 s") } }
-    Shortcut {
-        sequence: "Up"
-        onActivated: { video.volume = video.volume + 5; root.osd("Volume " + Math.round(Math.min(130, video.volume + 5)) + " %") }
-    }
-    Shortcut {
-        sequence: "Down"
-        onActivated: { video.volume = video.volume - 5; root.osd("Volume " + Math.round(Math.max(0, video.volume - 5)) + " %") }
-    }
-    Shortcut {
-        sequence: "M"
-        onActivated: { video.muted = !video.muted; root.osd(video.muted ? "Son rétabli" : "Muet") }
-    }
+    Shortcut { sequence: "Left"; onActivated: root.seekBy(-5) }
+    Shortcut { sequence: "Right"; onActivated: root.seekBy(5) }
+    Shortcut { sequence: "Ctrl+Left"; onActivated: root.seekBy(-30) }
+    Shortcut { sequence: "Ctrl+Right"; onActivated: root.seekBy(30) }
+    Shortcut { sequence: "Up"; onActivated: root.changeVolume(5) }
+    Shortcut { sequence: "Down"; onActivated: root.changeVolume(-5) }
+    Shortcut { sequence: "M"; onActivated: root.toggleMute() }
     Shortcut { sequence: "F"; onActivated: root.toggleFullScreen() }
     Shortcut { sequence: "Return"; onActivated: root.toggleFullScreen() }
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (trackMenu.visible || appMenu.visible) {
-                trackMenu.visible = false
-                appMenu.visible = false
+            if (trackMenu.visible || appMenu.visible || contextMenu.visible) {
+                root.closePopups()
             } else if (playlistPanel.open) {
                 playlistPanel.open = false
             } else if (root.fullscreen) {
@@ -613,15 +731,9 @@ Window {
     Shortcut { sequence: "Ctrl+Q"; onActivated: root.close() }
     Shortcut { sequence: "."; onActivated: video.frameStep(true) }
     Shortcut { sequence: ","; onActivated: video.frameStep(false) }
-    Shortcut {
-        sequence: "]"
-        onActivated: { video.speed = video.speed + 0.1; root.osd("Vitesse ×" + Math.min(4, video.speed + 0.1).toFixed(1)) }
-    }
-    Shortcut {
-        sequence: "["
-        onActivated: { video.speed = video.speed - 0.1; root.osd("Vitesse ×" + Math.max(0.25, video.speed - 0.1).toFixed(1)) }
-    }
-    Shortcut { sequence: "Backspace"; onActivated: { video.speed = 1.0; root.osd("Vitesse normale") } }
+    Shortcut { sequence: "]"; onActivated: root.setSpeed(Math.min(4, Math.round((video.speed + 0.1) * 10) / 10)) }
+    Shortcut { sequence: "["; onActivated: root.setSpeed(Math.max(0.25, Math.round((video.speed - 0.1) * 10) / 10)) }
+    Shortcut { sequence: "Backspace"; onActivated: root.setSpeed(1) }
     Shortcut { sequence: "J"; onActivated: { video.command(["cycle", "sub"]); root.osd("Sous-titres suivants") } }
     Shortcut { sequence: "PgDown"; onActivated: root.playAt(playlist.nextIndex) }
     Shortcut { sequence: "PgUp"; onActivated: root.playAt(playlist.previousIndex) }
