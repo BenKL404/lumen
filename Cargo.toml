@@ -11,6 +11,7 @@ regex = "1.13.1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.6"
+zbus = "5.19.0"
 
 [build-dependencies]
 cxx-qt-build = { version = "0.7", features = ["link_qt_object_files"] }
