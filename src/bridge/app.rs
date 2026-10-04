@@ -16,6 +16,12 @@ pub mod ffi {
         /// Enregistre le fournisseur d'images des miniatures (avant de charger le QML).
         fn lumen_register_thumbnails(engine: Pin<&mut QQmlApplicationEngine>);
 
+        /// Nom et identifiant de l'application ; avant de créer QGuiApplication.
+        fn lumen_init_app();
+
+        /// Icône des fenêtres ; après la création de QGuiApplication.
+        fn lumen_set_window_icon();
+
         /// Vrai si l'interface QML a bien été créée.
         fn lumen_qml_loaded(engine: &QQmlApplicationEngine) -> bool;
 

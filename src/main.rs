@@ -11,7 +11,9 @@ fn main() {
     // force le rendu OpenGL et enregistre le composant vidéo pour QML.
     bridge::video::ffi::lumen_init_video();
 
+    bridge::app::ffi::lumen_init_app();
     let mut app = QGuiApplication::new();
+    bridge::app::ffi::lumen_set_window_icon();
     let mut engine = QQmlApplicationEngine::new();
 
     if let Some(mut engine) = engine.as_mut() {

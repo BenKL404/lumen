@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Logo de Lumen : monogramme « L » dont l'angle abrite un bouton de lecture lumineux.
+       Couleurs de l'interface : fond bleu-noir #0B0D10, crème #ECE8E1, accent orange #FF8C1A. -->
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1C2028"/>
+      <stop offset="1" stop-color="#0B0D10"/>
+    </linearGradient>
+    <linearGradient id="light" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFC56B"/>
+      <stop offset="1" stop-color="#FF6A00"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+
+  <!-- Fond : carré arrondi, fin liseré clair pour se détacher des fonds sombres -->
+  <rect width="512" height="512" rx="114" fill="url(#background)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="112.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="3"/>
+
+  <!-- Le « L » -->
+  <path d="M150 136 V368 H364" fill="none" stroke="#ECE8E1" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Le bouton de lecture : halo, puis forme en dégradé ambre → orange -->
+  <path d="M236 200 L332 256 L236 312 Z" fill="#FF8C1A" opacity="0.6" stroke="#FF8C1A" stroke-width="30" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M236 200 L332 256 L236 312 Z" fill="url(#light)" stroke="url(#light)" stroke-width="32" stroke-linejoin="round"/>
+</svg>

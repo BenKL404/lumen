@@ -63,7 +63,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Aucune animation décorative qui distrait de la vidéo.
 
 ### Écran d'accueil
-- Quand aucune vidéo n'est ouverte : logo Lumen, invitation à glisser un fichier, et liste des **vidéos récentes** avec miniature et barre de progression indiquant où tu t'es arrêté.
+- Quand aucune vidéo n'est ouverte : **écran vide**, le fond seul, sans logo ni texte. On ouvre une vidéo par glisser-déposer, touche O, clic droit ou menu Lumen.
 
 ### Personnalisation (esprit skins PotPlayer)
 - Thèmes sombre, clair et « OLED noir pur ».

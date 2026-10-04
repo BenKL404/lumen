@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/lumen.svg" width="128" alt="Logo de Lumen"></p>
+
 # Lumen — lecteur vidéo pour Linux
 
 Lecteur vidéo moderne et performant pour Linux, inspiré de PotPlayer.
