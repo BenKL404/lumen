@@ -115,6 +115,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | Retour arrière | Vitesse normale |
 | J | Changer de sous-titres |
 | A | Changer de piste audio |
+| Z / X | Décaler les sous-titres de −0,1 s / +0,1 s |
 
 ---
 

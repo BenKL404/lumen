@@ -20,6 +20,35 @@ void *getProcAddress(void *, const char *name)
     return ctx ? reinterpret_cast<void *>(ctx->getProcAddress(QByteArray(name))) : nullptr;
 }
 
+// Convertit un nœud mpv (listes, dictionnaires, scalaires) en valeur lisible par QML
+QVariant nodeToVariant(const mpv_node *node)
+{
+    switch (node->format) {
+    case MPV_FORMAT_STRING:
+        return QString::fromUtf8(node->u.string);
+    case MPV_FORMAT_FLAG:
+        return node->u.flag != 0;
+    case MPV_FORMAT_INT64:
+        return static_cast<qlonglong>(node->u.int64);
+    case MPV_FORMAT_DOUBLE:
+        return node->u.double_;
+    case MPV_FORMAT_NODE_ARRAY: {
+        QVariantList list;
+        for (int i = 0; i < node->u.list->num; ++i)
+            list.append(nodeToVariant(&node->u.list->values[i]));
+        return list;
+    }
+    case MPV_FORMAT_NODE_MAP: {
+        QVariantMap map;
+        for (int i = 0; i < node->u.list->num; ++i)
+            map.insert(QString::fromUtf8(node->u.list->keys[i]), nodeToVariant(&node->u.list->values[i]));
+        return map;
+    }
+    default:
+        return {};
+    }
+}
+
 // mpv signale qu'une nouvelle image est prête -> redessiner (thread GUI)
 void onMpvRedraw(void *ctx)
 {
@@ -119,6 +148,8 @@ MpvItem::MpvItem(QQuickItem *parent) : QQuickFramebufferObject(parent)
     mpv_observe_property(m_mpv, 0, "volume", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "speed", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "media-title", MPV_FORMAT_STRING);
+    mpv_observe_property(m_mpv, 0, "track-list", MPV_FORMAT_NODE);
+    mpv_observe_property(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE);
 
     mpv_set_wakeup_callback(m_mpv, onMpvWakeup, this);
 
@@ -187,6 +218,14 @@ void MpvItem::handlePropertyChange(const mpv_event_property *prop)
     } else if (std::strcmp(name, "media-title") == 0) {
         m_mediaTitle = available ? QString::fromUtf8(*static_cast<char **>(prop->data)) : QString();
         emit mediaTitleChanged();
+    } else if (std::strcmp(name, "track-list") == 0) {
+        m_tracks = available && prop->format == MPV_FORMAT_NODE
+            ? nodeToVariant(static_cast<mpv_node *>(prop->data)).toList()
+            : QVariantList();
+        emit tracksChanged();
+    } else if (std::strcmp(name, "sub-delay") == 0 && available) {
+        m_subDelay = *static_cast<double *>(prop->data);
+        emit subDelayChanged();
     }
 }
 
@@ -214,6 +253,11 @@ void MpvItem::setSpeed(double speed)
 {
     double s = qBound(0.25, speed, 4.0);
     mpv_set_property_async(m_mpv, 0, "speed", MPV_FORMAT_DOUBLE, &s);
+}
+
+void MpvItem::setSubDelay(double seconds)
+{
+    mpv_set_property_async(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE, &seconds);
 }
 
 void MpvItem::loadFile(const QUrl &url)
