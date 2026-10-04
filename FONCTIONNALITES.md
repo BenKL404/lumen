@@ -22,7 +22,7 @@ L'objectif : la richesse et l'efficacité de PotPlayer, avec la finition d'une a
 | Surfaces | Verre fumé translucide avec flou d'arrière-plan |
 | Texte principal | Blanc cassé `#ECE8E1` |
 | Texte secondaire | Gris doux `#8B9099` |
-| Couleur d'accent | Ambre « lumière de projecteur » `#F2A541` |
+| Couleur d'accent | Orange vif `#FF8C1A` |
 | Arrondis | 16 px pour les panneaux, boutons ronds |
 | Police | Sans-serif moderne (Inter ou équivalent), chiffres à chasse fixe pour les durées |
 | Icônes | Jeu d'icônes vectorielles fines et homogènes (style Lucide) |

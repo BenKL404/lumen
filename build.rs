@@ -16,6 +16,8 @@ fn main() {
                 "qml/SeekBar.qml",
                 "qml/TrackMenu.qml",
                 "qml/PlaylistPanel.qml",
+                "qml/TitleBar.qml",
+                "qml/AppMenu.qml",
             ],
             ..Default::default()
         })
@@ -28,12 +30,19 @@ fn main() {
             cc.include("cpp");
             cc.file("cpp/mpvitem.cpp");
             cc.file("cpp/app.cpp");
+            cc.file("cpp/probe.cpp");
         })
         .build();
 
     // Liaison avec libmpv
     println!("cargo:rustc-link-lib=mpv");
+    // Lecture des durées de la playlist (cpp/probe.cpp)
+    println!("cargo:rustc-link-lib=avformat");
+    println!("cargo:rustc-link-lib=avutil");
     println!("cargo:rerun-if-changed=cpp/mpvitem.cpp");
     println!("cargo:rerun-if-changed=cpp/app.cpp");
     println!("cargo:rerun-if-changed=cpp/app.h");
+    println!("cargo:rerun-if-changed=cpp/probe.cpp");
+    println!("cargo:rerun-if-changed=cpp/probe.h");
+    println!("cargo:rerun-if-changed=cpp/mpvitem.h");
 }

@@ -17,6 +17,29 @@ pub mod qobject {
         #[cxx_name = "formatTime"]
         fn format_time(self: &Utils, seconds: f64) -> QString;
 
+        /// Durée au format long, toujours avec les heures : 91.0 -> "00:01:31"
+        #[qinvokable]
+        #[cxx_name = "formatClock"]
+        fn format_clock(self: &Utils, seconds: f64) -> QString;
+
+        /// Extension en majuscules pour le badge de format : ".../film.mkv" -> "MKV"
+        #[qinvokable]
+        #[cxx_name = "fileExtension"]
+        fn file_extension(self: &Utils, url: &QString) -> QString;
+
+        /// Ligne d'infos techniques : "H.264 1920×1080 · AAC 48 kHz" ou "MP3 · 320 kbps · 44,1 kHz"
+        #[qinvokable]
+        #[cxx_name = "mediaInfo"]
+        fn media_info(
+            self: &Utils,
+            video_codec: &QString,
+            width: i64,
+            height: i64,
+            audio_codec: &QString,
+            sample_rate: i64,
+            audio_bitrate: f64,
+        ) -> QString;
+
         /// Extrait un nom lisible depuis une URL : "file:///films/Mon%20Film.mkv" -> "Mon Film.mkv"
         #[qinvokable]
         #[cxx_name = "fileName"]
@@ -54,6 +77,33 @@ pub struct UtilsRust;
 impl qobject::Utils {
     pub fn format_time(&self, seconds: f64) -> QString {
         QString::from(&format_time(seconds))
+    }
+
+    pub fn format_clock(&self, seconds: f64) -> QString {
+        QString::from(&format_clock(seconds))
+    }
+
+    pub fn file_extension(&self, url: &QString) -> QString {
+        QString::from(&file_extension(&url.to_string()))
+    }
+
+    pub fn media_info(
+        &self,
+        video_codec: &QString,
+        width: i64,
+        height: i64,
+        audio_codec: &QString,
+        sample_rate: i64,
+        audio_bitrate: f64,
+    ) -> QString {
+        QString::from(&media_info(
+            &video_codec.to_string(),
+            width,
+            height,
+            &audio_codec.to_string(),
+            sample_rate,
+            audio_bitrate,
+        ))
     }
 
     pub fn file_name(&self, url: &QString) -> QString {
@@ -97,6 +147,79 @@ pub fn format_time(seconds: f64) -> String {
     } else {
         format!("{m}:{s:02}")
     }
+}
+
+pub fn format_clock(seconds: f64) -> String {
+    let total = if seconds.is_finite() && seconds > 0.0 { seconds.floor() as u64 } else { 0 };
+    format!("{:02}:{:02}:{:02}", total / 3600, (total % 3600) / 60, total % 60)
+}
+
+pub fn file_extension(url: &str) -> String {
+    let name = file_name(url);
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() && ext.len() <= 5 => ext.to_ascii_uppercase(),
+        _ => String::new(),
+    }
+}
+
+/// Nom usuel d'un codec à partir du nom FFmpeg utilisé par mpv.
+fn codec_name(codec: &str) -> String {
+    match codec.to_ascii_lowercase().as_str() {
+        "h264" => "H.264".into(),
+        "hevc" | "h265" => "HEVC".into(),
+        "mpeg4" => "MPEG-4".into(),
+        "mpeg2video" => "MPEG-2".into(),
+        "eac3" => "E-AC3".into(),
+        "truehd" => "TrueHD".into(),
+        "vorbis" => "Vorbis".into(),
+        "opus" => "Opus".into(),
+        c if c.starts_with("pcm_") => "PCM".into(),
+        c if c.starts_with("dts") => "DTS".into(),
+        c => c.to_ascii_uppercase(),
+    }
+}
+
+/// "44,1 kHz", "48 kHz"
+fn sample_rate_name(rate: i64) -> Option<String> {
+    (rate > 0).then(|| {
+        let khz = rate as f64 / 1000.0;
+        if khz.fract() == 0.0 {
+            format!("{khz:.0} kHz")
+        } else {
+            format!("{khz:.1} kHz").replace('.', ",")
+        }
+    })
+}
+
+pub fn media_info(
+    video_codec: &str,
+    width: i64,
+    height: i64,
+    audio_codec: &str,
+    sample_rate: i64,
+    audio_bitrate: f64,
+) -> String {
+    let mut parts = Vec::new();
+    let has_video = !video_codec.is_empty() && width > 0 && height > 0;
+    if has_video {
+        parts.push(format!("{} {width}×{height}", codec_name(video_codec)));
+    }
+    if !audio_codec.is_empty() {
+        parts.push(codec_name(audio_codec));
+        // Le débit audio n'est parlant que pour un fichier audio
+        if !has_video && audio_bitrate.is_finite() && audio_bitrate > 0.0 {
+            parts.push(format!("{:.0} kbps", audio_bitrate / 1000.0));
+        }
+        if let Some(rate) = sample_rate_name(sample_rate) {
+            if has_video {
+                let last = parts.pop().unwrap_or_default();
+                parts.push(format!("{last} {rate}"));
+            } else {
+                parts.push(rate);
+            }
+        }
+    }
+    parts.join(" · ")
 }
 
 pub fn file_name(url: &str) -> String {
@@ -225,6 +348,32 @@ mod tests {
     fn extracts_file_name() {
         assert_eq!(file_name("file:///films/Mon%20Film.mkv"), "Mon Film.mkv");
         assert_eq!(file_name("file:///a/%C3%A9t%C3%A9.mp4"), "été.mp4");
+    }
+
+    #[test]
+    fn formats_clock() {
+        assert_eq!(format_clock(91.4), "00:01:31");
+        assert_eq!(format_clock(3725.0), "01:02:05");
+        assert_eq!(format_clock(-3.0), "00:00:00");
+        assert_eq!(format_clock(f64::NAN), "00:00:00");
+    }
+
+    #[test]
+    fn extracts_extensions() {
+        assert_eq!(file_extension("file:///films/Mon%20Film.mkv"), "MKV");
+        assert_eq!(file_extension("/a/b/chanson.Mp3"), "MP3");
+        assert_eq!(file_extension("/a/.cache"), "");
+        assert_eq!(file_extension("/a/sans-extension"), "");
+    }
+
+    #[test]
+    fn describes_media() {
+        assert_eq!(media_info("h264", 1920, 1080, "aac", 48000, 192000.0), "H.264 1920×1080 · AAC 48 kHz");
+        assert_eq!(media_info("hevc", 3840, 2160, "eac3", 0, 0.0), "HEVC 3840×2160 · E-AC3");
+        assert_eq!(media_info("", 0, 0, "mp3", 44100, 320000.0), "MP3 · 320 kbps · 44,1 kHz");
+        // Pochette d'album : mpv la voit comme une piste vidéo sans dimensions utiles
+        assert_eq!(media_info("mjpeg", 0, 0, "flac", 96000, 0.0), "FLAC · 96 kHz");
+        assert_eq!(media_info("", 0, 0, "", 0, 0.0), "");
     }
 
     #[test]

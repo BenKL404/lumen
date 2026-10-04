@@ -4,6 +4,7 @@
 #include <QtCore/QStringList>
 #include <QtCore/QUrl>
 #include <QtCore/QVariantList>
+#include <QtCore/QVariantMap>
 #include <QtQuick/QQuickFramebufferObject>
 
 #include <mpv/client.h>
@@ -26,6 +27,9 @@ class MpvItem : public QQuickFramebufferObject
     Q_PROPERTY(double subDelay READ subDelay WRITE setSubDelay NOTIFY subDelayChanged)
     // Vrai quand la lecture est arrivée au bout (keep-open : mpv reste sur la dernière image)
     Q_PROPERTY(bool eofReached READ eofReached NOTIFY eofReachedChanged)
+    Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
+    // Infos techniques, indexées par nom de propriété mpv (video-format, width, audio-bitrate…)
+    Q_PROPERTY(QVariantMap info READ info NOTIFY infoChanged)
 
 public:
     explicit MpvItem(QQuickItem *parent = nullptr);
@@ -43,14 +47,19 @@ public:
     QVariantList tracks() const { return m_tracks; }
     double subDelay() const { return m_subDelay; }
     bool eofReached() const { return m_eofReached; }
+    bool muted() const { return m_muted; }
+    QVariantMap info() const { return m_info; }
 
     void setPaused(bool paused);
     void setVolume(double volume);
     void setSpeed(double speed);
     void setSubDelay(double seconds);
+    void setMuted(bool muted);
 
     Q_INVOKABLE void loadFile(const QUrl &url);
     Q_INVOKABLE void togglePause();
+    // Ferme le fichier et revient à l'écran d'accueil
+    Q_INVOKABLE void stop();
     Q_INVOKABLE void seekAbsolute(double seconds);
     Q_INVOKABLE void seekRelative(double seconds);
     Q_INVOKABLE void frameStep(bool forward);
@@ -69,11 +78,15 @@ signals:
     void tracksChanged();
     void subDelayChanged();
     void eofReachedChanged();
+    void mutedChanged();
+    void infoChanged();
     void fileLoaded();
     void endOfFile();
 
 private slots:
     void handleEvents();
+    // Le contexte de rendu existe : charger le fichier demandé avant (sinon mpv n'a pas de sortie vidéo)
+    void onRenderReady();
 
 private:
     void handlePropertyChange(const mpv_event_property *prop);
@@ -93,6 +106,10 @@ private:
     QVariantList m_tracks;
     double m_subDelay = 0.0;
     bool m_eofReached = false;
+    bool m_muted = false;
+    QVariantMap m_info;
+    bool m_renderReady = false;
+    QUrl m_pendingLoad;
 };
 
 // Appelé depuis Rust avant la création de la fenêtre.

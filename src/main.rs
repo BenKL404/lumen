@@ -2,7 +2,7 @@
 
 mod bridge;
 
-use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
+use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 
 fn main() {
     // Doit être appelé avant la création de la fenêtre :
@@ -24,6 +24,22 @@ fn main() {
              Vérifie que les modules qml6-module-* du README sont installés."
         );
         std::process::exit(1);
+    }
+
+    if let Some(engine) = engine.as_ref() {
+        // `lumen fichier.mkv` : ouvre le fichier au démarrage
+        if let Some(file) = std::env::args().nth(1) {
+            bridge::app::ffi::lumen_open_file(engine, &QString::from(&file));
+        }
+        // Outil de développement : LUMEN_SNAPSHOT=capture.png enregistre la fenêtre puis quitte
+        if let Some(path) = std::env::var_os("LUMEN_SNAPSHOT") {
+            let delay = std::env::var("LUMEN_SNAPSHOT_DELAY").ok().and_then(|d| d.parse().ok());
+            bridge::app::ffi::lumen_snapshot(
+                engine,
+                &QString::from(&*path.to_string_lossy()),
+                delay.unwrap_or(2500),
+            );
+        }
     }
 
     if let Some(app) = app.as_mut() {

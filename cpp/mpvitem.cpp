@@ -2,6 +2,7 @@
 
 #include <clocale>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #include <QtGui/QGuiApplication>
@@ -13,6 +14,11 @@
 #include <QtQuick/QQuickWindow>
 
 namespace {
+
+// Propriétés mpv recopiées telles quelles dans MpvItem::info
+const char *const kInfoProperties[] = {
+    "video-format", "width", "height", "audio-codec-name", "audio-params/samplerate", "audio-bitrate",
+};
 
 void *getProcAddress(void *, const char *name)
 {
@@ -96,6 +102,7 @@ public:
                 qFatal("Impossible d'initialiser le rendu mpv");
 
             mpv_render_context_set_update_callback(m_item->m_renderCtx, onMpvRedraw, m_item);
+            QMetaObject::invokeMethod(m_item, "onRenderReady", Qt::QueuedConnection);
         }
         return QQuickFramebufferObject::Renderer::createFramebufferObject(size);
     }
@@ -151,11 +158,12 @@ MpvItem::MpvItem(QQuickItem *parent) : QQuickFramebufferObject(parent)
     mpv_observe_property(m_mpv, 0, "track-list", MPV_FORMAT_NODE);
     mpv_observe_property(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "eof-reached", MPV_FORMAT_FLAG);
+    mpv_observe_property(m_mpv, 0, "mute", MPV_FORMAT_FLAG);
+    for (const char *name : kInfoProperties)
+        mpv_observe_property(m_mpv, 0, name, MPV_FORMAT_NODE);
 
     mpv_set_wakeup_callback(m_mpv, onMpvWakeup, this);
 
-    // Le FBO de Qt est inversé verticalement par rapport à mpv
-    setMirrorVertically(true);
 }
 
 MpvItem::~MpvItem()
@@ -233,6 +241,20 @@ void MpvItem::handlePropertyChange(const mpv_event_property *prop)
             m_eofReached = reached;
             emit eofReachedChanged();
         }
+    } else if (std::strcmp(name, "mute") == 0 && available) {
+        m_muted = *static_cast<int *>(prop->data) != 0;
+        emit mutedChanged();
+    } else {
+        for (const char *infoName : kInfoProperties) {
+            if (std::strcmp(name, infoName) != 0)
+                continue;
+            if (available && prop->format == MPV_FORMAT_NODE)
+                m_info.insert(QString::fromUtf8(name), nodeToVariant(static_cast<mpv_node *>(prop->data)));
+            else
+                m_info.remove(QString::fromUtf8(name));
+            emit infoChanged();
+            break;
+        }
     }
 }
 
@@ -267,11 +289,34 @@ void MpvItem::setSubDelay(double seconds)
     mpv_set_property_async(m_mpv, 0, "sub-delay", MPV_FORMAT_DOUBLE, &seconds);
 }
 
+void MpvItem::onRenderReady()
+{
+    m_renderReady = true;
+    if (!m_pendingLoad.isEmpty())
+        loadFile(std::exchange(m_pendingLoad, QUrl()));
+}
+
 void MpvItem::loadFile(const QUrl &url)
 {
+    if (!m_renderReady) {
+        m_pendingLoad = url;
+        return;
+    }
     const QString target = url.isLocalFile() ? url.toLocalFile() : url.toString();
     command({QStringLiteral("loadfile"), target});
     setPaused(false);
+}
+
+void MpvItem::setMuted(bool muted)
+{
+    int flag = muted ? 1 : 0;
+    mpv_set_property_async(m_mpv, 0, "mute", MPV_FORMAT_FLAG, &flag);
+}
+
+void MpvItem::stop()
+{
+    command({QStringLiteral("stop")});
+    setHasMedia(false);
 }
 
 void MpvItem::togglePause()
