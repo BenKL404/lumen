@@ -552,6 +552,71 @@ Window {
     Utils { id: utils }
     History { id: history }
     Settings { id: settings }
+
+    // Pas de mise en veille de l'écran pendant la lecture d'une vidéo ; en pause, à
+    // l'arrêt ou pour un fichier audio, le bureau reprend la main
+    ScreenGuard { id: screenGuard }
+    readonly property bool keepScreenAwake: video.hasMedia && !video.paused && !video.eofReached && controls.realVideo
+    onKeepScreenAwakeChanged: screenGuard.setActive(keepScreenAwake)
+
+    // Contrôle par le bureau (MPRIS) : touches multimédia, applet du panneau, écran de verrouillage
+    Mpris {
+        id: mpris
+        onCommand: (name, number, text) => root.handleDesktopCommand(name, number, text)
+    }
+
+    function publishState() {
+        const status = !video.hasMedia ? 0 : video.paused ? 2 : 1
+        mpris.update(status, video.mediaTitle || utils.fileName(currentUrl), currentUrl,
+                     video.duration, video.position, video.volume, video.speed,
+                     playlist.repeatMode, playlist.shuffle, hasNext, hasPrevious)
+    }
+
+    function handleDesktopCommand(name, number, text) {
+        switch (name) {
+        case "play-pause": if (video.hasMedia) video.togglePause(); break
+        case "play": video.paused = false; break
+        case "pause": video.paused = true; break
+        case "stop": stop(); break
+        case "next": playAt(playlist.nextIndex); break
+        case "previous": playAt(playlist.previousIndex); break
+        case "seek": video.seekRelative(number); break
+        case "position": video.seekAbsolute(number); break
+        case "volume": video.volume = number; break
+        case "rate": setSpeed(Math.max(0.25, Math.min(4, number))); break
+        case "repeat": playlist.setRepeat(number); break
+        case "shuffle": playlist.setShuffleEnabled(number > 0); break
+        case "raise": raise(); requestActivate(); break
+        case "quit": close(); break
+        case "open": openUrl(text); break
+        }
+        Qt.callLater(publishState)
+    }
+
+    // Position une fois par seconde (le bureau l'interroge) ; le reste dès qu'il change
+    Timer {
+        interval: 1000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: root.publishState()
+    }
+    Connections {
+        target: video
+        function onPausedChanged() { Qt.callLater(root.publishState) }
+        function onHasMediaChanged() { Qt.callLater(root.publishState) }
+        function onMediaTitleChanged() { Qt.callLater(root.publishState) }
+        function onDurationChanged() { Qt.callLater(root.publishState) }
+        function onVolumeChanged() { Qt.callLater(root.publishState) }
+        function onSpeedChanged() { Qt.callLater(root.publishState) }
+    }
+    Connections {
+        target: playlist
+        function onRepeatModeChanged() { Qt.callLater(root.publishState) }
+        function onShuffleChanged() { Qt.callLater(root.publishState) }
+        function onNextIndexChanged() { Qt.callLater(root.publishState) }
+        function onPreviousIndexChanged() { Qt.callLater(root.publishState) }
+    }
     Playlist {
         id: playlist
         autoBuild: settings.autoPlaylist
