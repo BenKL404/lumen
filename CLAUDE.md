@@ -18,12 +18,15 @@ Run from the repo root:
 ```bash
 cargo run                      # debug build + launch
 cargo run --release
-cargo test                     # unit tests (pure Rust helpers in src/bridge/utils.rs)
+cargo test                     # unit tests (pure-Rust logic of every src/bridge module)
 cargo test formats_time        # single test by name
+scripts/install.sh [--default]  # release build + install to ~/.local (binary, hicolor icons, lumen.desktop); PREFIX=… to test elsewhere
+scripts/uninstall.sh            # removes them, strips lumen.desktop from every *mimeapps.list and restores the pre-install defaults (*.avant-lumen backups)
 ```
 
 - Requires Rust ≥ 1.85, Qt 6 dev packages (base, declarative, OpenGL) and `libmpv-dev`.
 - CXX-Qt needs Qt 6's `qmake`; `.cargo/config.toml` sets `QMAKE=/usr/bin/qmake6` for every cargo command.
+- `--default` writes `[Default Applications]` itself instead of `xdg-mime default`: desktops read `<desktop>-mimeapps.list` (e.g. `cosmic-mimeapps.list`) before `mimeapps.list`, and `xdg-mime` only writes the latter.
 - First build is slow (CXX-Qt generates and compiles a lot of C++).
 
 ## Architecture

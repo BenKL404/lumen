@@ -75,6 +75,20 @@ Les suivantes sont incrémentales et rapides.
 
 ---
 
+## Installation
+
+```bash
+scripts/install.sh            # installe Lumen dans ~/.local (sans sudo)
+scripts/install.sh --default  # … et en fait le lecteur vidéo par défaut
+scripts/uninstall.sh          # désinstalle (paramètres et historique conservés)
+```
+
+Lumen apparaît alors dans le lanceur d'applications, avec son icône, et dans
+clic droit › **Ouvrir avec** du gestionnaire de fichiers. `lumen fichier.mkv` ou
+`lumen dossier/` fonctionnent aussi dans un terminal.
+
+---
+
 ## Données et paramètres
 
 | Fichier | Contenu |
