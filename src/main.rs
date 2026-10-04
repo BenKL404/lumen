@@ -14,7 +14,8 @@ fn main() {
     let mut app = QGuiApplication::new();
     let mut engine = QQmlApplicationEngine::new();
 
-    if let Some(engine) = engine.as_mut() {
+    if let Some(mut engine) = engine.as_mut() {
+        bridge::app::ffi::lumen_register_thumbnails(engine.as_mut());
         engine.load(&QUrl::from("qrc:/qt/qml/com/lumen/player/qml/Main.qml"));
     }
 

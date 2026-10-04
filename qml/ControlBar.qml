@@ -14,6 +14,7 @@ Rectangle {
     property bool shuffle: false
     property var bookmarks: []
     property bool imagePanelOpen: false
+    property string mediaUrl: ""
     // Clic sur la durée : afficher le temps restant (comme PotPlayer)
     property bool showRemaining: false
     readonly property bool hovered: hover.hovered
@@ -76,6 +77,13 @@ Rectangle {
                 enabled: bar.video.hasMedia
                 tooltipFormatter: (seconds) => bar.utils.formatClock(seconds)
                 chapters: bar.video.chapters
+                // Miniatures par paliers (environ 200 par vidéo) : moins de calculs, cache efficace
+                previewSource: bar.realVideo && bar.mediaUrl !== ""
+                    ? (seconds) => {
+                        const step = Math.max(1, bar.video.duration / 200)
+                        return bar.utils.thumbnailUrl(bar.mediaUrl, Math.round(seconds / step) * step)
+                    }
+                    : null
                 bookmarks: bar.bookmarks
                 loopA: bar.video.abLoopA
                 loopB: bar.video.abLoopB
