@@ -40,6 +40,7 @@ void lumen_snapshot(const QQmlApplicationEngine &engine, const QString &path, in
     QTimer::singleShot(delayMs, window, [window, path] {
         if (!window->grabWindow().save(path))
             qWarning("Lumen : impossible d'enregistrer la capture %s", qPrintable(path));
-        QGuiApplication::quit();
+        // Fermeture normale (et non quit()) : enregistre la position et les paramètres comme ✕
+        window->close();
     });
 }

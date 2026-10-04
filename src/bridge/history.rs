@@ -43,6 +43,10 @@ pub mod qobject {
         /// Efface la position enregistrée (bouton « Recommencer »).
         #[qinvokable]
         fn forget(self: &History, url: &QString);
+
+        /// Efface tout l'historique de lecture.
+        #[qinvokable]
+        fn clear(self: &History);
     }
 }
 
@@ -138,6 +142,14 @@ impl qobject::History {
         };
         if let Err(e) = result {
             eprintln!("Lumen : échec de l'enregistrement de la position ({e})");
+        }
+    }
+
+    pub fn clear(&self) {
+        if let Some(store) = &self.rust().store {
+            if let Err(e) = store.clear() {
+                eprintln!("Lumen : échec de l'effacement de l'historique ({e})");
+            }
         }
     }
 
@@ -291,6 +303,11 @@ impl HistoryStore {
         self.conn.execute("DELETE FROM positions WHERE key = ?1", params![key])?;
         Ok(())
     }
+
+    pub fn clear(&self) -> rusqlite::Result<()> {
+        self.conn.execute("DELETE FROM positions", [])?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -326,6 +343,11 @@ mod tests {
 
         store.forget("a").unwrap();
         assert_eq!(store.get("a").unwrap(), None);
+
+        store.save("a", &Entry { position: 120.0, ..Entry::default() }).unwrap();
+        store.save("b", &Entry { position: 240.0, ..Entry::default() }).unwrap();
+        store.clear().unwrap();
+        assert_eq!((store.get("a").unwrap(), store.get("b").unwrap()), (None, None));
     }
 
     #[test]
