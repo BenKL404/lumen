@@ -13,6 +13,7 @@ Rectangle {
     property int repeatMode: 0 // 0 désactivé, 1 le fichier, 2 la playlist
     property bool shuffle: false
     property var bookmarks: []
+    property bool imagePanelOpen: false
     // Clic sur la durée : afficher le temps restant (comme PotPlayer)
     property bool showRemaining: false
     readonly property bool hovered: hover.hovered
@@ -41,7 +42,7 @@ Rectangle {
     signal repeatRequested()
     signal shuffleRequested()
     signal abLoopClearRequested()
-    signal settingsRequested(Item anchor)
+    signal imageSettingsRequested()
 
     height: 84
     radius: floating ? theme.radius : 0
@@ -216,7 +217,7 @@ Rectangle {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 spacing: 2
 
-                IconButton { theme: bar.theme; icon: "music"; onClicked: bar.audioMenuRequested() }
+                IconButton { theme: bar.theme; icon: "audio-lines"; onClicked: bar.audioMenuRequested() }
                 IconButton { theme: bar.theme; icon: "captions"; onClicked: bar.subtitleMenuRequested() }
                 IconButton {
                     theme: bar.theme
@@ -224,7 +225,7 @@ Rectangle {
                     onClicked: bar.video.speed = bar.video.speed >= 2 ? 1.0 : bar.video.speed + 0.25
                 }
                 IconButton { theme: bar.theme; icon: "camera"; enabled: bar.video.hasMedia; onClicked: bar.video.screenshot() }
-                IconButton { id: settingsButton; theme: bar.theme; icon: "settings"; onClicked: bar.settingsRequested(settingsButton) }
+                IconButton { theme: bar.theme; icon: "sliders"; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
                 IconButton { theme: bar.theme; icon: "shuffle"; active: bar.shuffle; onClicked: bar.shuffleRequested() }
                 IconButton {
                     theme: bar.theme

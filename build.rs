@@ -19,6 +19,7 @@ fn main() {
                 "qml/TitleBar.qml",
                 "qml/AppMenu.qml",
                 "qml/Icon.qml",
+                "qml/ImagePanel.qml",
             ],
             ..Default::default()
         })

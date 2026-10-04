@@ -10,6 +10,8 @@ Item {
     // true : émet moved() pendant le glissement (volume)
     // false : n'émet qu'au relâchement (position, évite de saturer mpv)
     property bool live: false
+    // Point de départ du remplissage (réglages centrés sur une valeur neutre)
+    property real origin: 0
     property var tooltipFormatter: null
     // Repères (barre de progression) : chapitres [{ title, time }], signets [secondes],
     // boucle A-B (bornes en secondes, -1 si non définies)
@@ -54,7 +56,8 @@ Item {
         Behavior on height { NumberAnimation { duration: 120 } }
 
         Rectangle {
-            width: slider.to > 0 ? parent.width * Math.min(1, slider.shownValue / slider.to) : 0
+            x: Math.min(slider.xAt(slider.origin), slider.xAt(slider.shownValue))
+            width: Math.abs(slider.xAt(slider.shownValue) - slider.xAt(slider.origin))
             height: parent.height
             radius: parent.radius
             color: slider.theme.accent
