@@ -33,7 +33,17 @@ pub mod qobject {
         // `repeatMode` : 0 désactivé, 1 le fichier, 2 la playlist
         #[qproperty(i32, repeat_mode, READ, NOTIFY)]
         #[qproperty(bool, shuffle, READ, NOTIFY)]
+        // Faux : ouvrir un fichier ne lui ajoute pas les fichiers du même nom
+        #[qproperty(bool, auto_build)]
         type Playlist = super::PlaylistRust;
+
+        /// Règle la répétition (0 désactivée, 1 le fichier, 2 la playlist).
+        #[qinvokable]
+        fn set_repeat(self: Pin<&mut Playlist>, mode: i32);
+
+        /// Active ou coupe la lecture aléatoire.
+        #[qinvokable]
+        fn set_shuffle_enabled(self: Pin<&mut Playlist>, on: bool);
 
         /// Remplace la playlist par les fichiers audio et vidéo d'un dossier.
         /// Renvoie l'URL du premier fichier à lire (vide si le dossier n'en contient pas).
@@ -100,16 +110,18 @@ pub struct PlaylistRust {
     previous_index: i32,
     repeat_mode: i32,
     shuffle: bool,
+    auto_build: bool,
 }
 
 impl qobject::Playlist {
     pub fn load(mut self: Pin<&mut Self>, url: &QString) {
         let key = local_path(&url.to_string());
+        let auto_build = self.rust().auto_build;
         let rebuild = || {
-            if key.starts_with('/') {
+            if auto_build && key.starts_with('/') {
                 build(Path::new(&key)).iter().map(|p| p.to_string_lossy().into_owned()).collect()
             } else {
-                Vec::new() // flux réseau : pas de dossier à parcourir
+                Vec::new() // flux réseau, ou playlist automatique désactivée : le fichier seul
             }
         };
         self.as_mut().rust_mut().model.open(&key, rebuild);
@@ -122,6 +134,23 @@ impl qobject::Playlist {
         let first = self.as_mut().rust_mut().model.replace(keys);
         self.as_mut().sync();
         QString::from(&first.map(|k| item_url(&k)).unwrap_or_default())
+    }
+
+    pub fn set_repeat(mut self: Pin<&mut Self>, mode: i32) {
+        let repeat = match mode {
+            1 => Repeat::One,
+            2 => Repeat::All,
+            _ => Repeat::Off,
+        };
+        self.as_mut().rust_mut().model.repeat = repeat;
+        self.as_mut().sync();
+    }
+
+    pub fn set_shuffle_enabled(mut self: Pin<&mut Self>, on: bool) {
+        if self.rust().model.shuffle() != on {
+            self.as_mut().rust_mut().model.set_shuffle(on);
+            self.as_mut().sync();
+        }
     }
 
     pub fn cycle_repeat(mut self: Pin<&mut Self>) {

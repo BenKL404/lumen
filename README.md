@@ -73,6 +73,15 @@ Les suivantes sont incrémentales et rapides.
 
 ---
 
+## Données et paramètres
+
+| Fichier | Contenu |
+|---|---|
+| `~/.config/lumen/settings.toml` | Paramètres (volume, répétition, aléatoire, fenêtre, options) — modifiable à la main, Lumen fermé |
+| `~/.local/share/lumen/history.db` | Historique de lecture (positions, pistes, sous-titres) |
+
+---
+
 ## 3. Structure du projet
 
 ```
