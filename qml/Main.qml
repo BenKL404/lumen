@@ -702,28 +702,6 @@ Window {
             }
         }
 
-        // Écran d'accueil
-        Column {
-            anchors.centerIn: parent
-            spacing: 12
-            visible: !video.hasMedia
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Lumen"
-                color: theme.text
-                font.pixelSize: 46
-                font.weight: Font.Light
-                font.letterSpacing: 2
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "Glissez une vidéo ici, ou appuyez sur O pour ouvrir un fichier"
-                color: theme.muted
-                font.pixelSize: 15
-            }
-        }
-
         MouseArea {
             anchors.fill: parent
             id: stageArea

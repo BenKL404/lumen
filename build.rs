@@ -22,6 +22,8 @@ fn main() {
                 "qml/Icon.qml",
                 "qml/ImagePanel.qml",
             ],
+            // Logo (écran d'accueil, barre de titre, icône de la fenêtre)
+            qrc_files: &["assets/lumen.svg"],
             ..Default::default()
         })
         // Ponts Rust -> C++ (moteur vidéo, utilitaires d'application)
@@ -54,4 +56,5 @@ fn main() {
     println!("cargo:rerun-if-changed=cpp/thumbnail.cpp");
     println!("cargo:rerun-if-changed=cpp/thumbnail.h");
     println!("cargo:rerun-if-changed=cpp/mpvitem.h");
+    println!("cargo:rerun-if-changed=assets/lumen.svg");
 }

@@ -4,6 +4,13 @@
 #include <QtCore/QString>
 #include <QtQml/QQmlApplicationEngine>
 
+// Nom et identifiant de l'application (« lumen » : relie la fenêtre à lumen.desktop et à
+// son icône sous Wayland). À appeler avant de créer QGuiApplication.
+void lumen_init_app();
+
+// Icône des fenêtres (logo embarqué). À appeler après la création de QGuiApplication.
+void lumen_set_window_icon();
+
 // Vrai si l'interface QML a bien été créée (au moins un objet racine).
 bool lumen_qml_loaded(const QQmlApplicationEngine &engine);
 

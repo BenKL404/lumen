@@ -49,8 +49,15 @@ Rectangle {
             Row {
                 id: menuContent
                 anchors.centerIn: parent
-                spacing: 4
+                spacing: 6
 
+                Image {
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "qrc:/qt/qml/com/lumen/player/assets/lumen.svg"
+                    sourceSize: Qt.size(18, 18)
+                    width: 18
+                    height: 18
+                }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Lumen"

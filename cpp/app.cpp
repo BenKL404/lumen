@@ -4,6 +4,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtGui/QGuiApplication>
+#include <QtGui/QIcon>
 #include <QtGui/QImage>
 #include <QtQuick/QQuickWindow>
 
@@ -16,6 +17,17 @@ QQuickWindow *rootWindow(const QQmlApplicationEngine &engine)
 }
 
 } // namespace
+
+void lumen_init_app()
+{
+    QGuiApplication::setApplicationName(QStringLiteral("Lumen"));
+    QGuiApplication::setDesktopFileName(QStringLiteral("lumen"));
+}
+
+void lumen_set_window_icon()
+{
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/com/lumen/player/assets/lumen.svg")));
+}
 
 bool lumen_qml_loaded(const QQmlApplicationEngine &engine)
 {
