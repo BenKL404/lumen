@@ -3,6 +3,7 @@
 
 #include <QtCore/QStringList>
 #include <QtCore/QUrl>
+#include <QtCore/QVariantList>
 #include <QtQuick/QQuickFramebufferObject>
 
 #include <mpv/client.h>
@@ -20,6 +21,9 @@ class MpvItem : public QQuickFramebufferObject
     Q_PROPERTY(double speed READ speed WRITE setSpeed NOTIFY speedChanged)
     Q_PROPERTY(QString mediaTitle READ mediaTitle NOTIFY mediaTitleChanged)
     Q_PROPERTY(bool hasMedia READ hasMedia NOTIFY hasMediaChanged)
+    // Pistes du fichier (propriété mpv « track-list ») : id, type, title, lang, codec, selected…
+    Q_PROPERTY(QVariantList tracks READ tracks NOTIFY tracksChanged)
+    Q_PROPERTY(double subDelay READ subDelay WRITE setSubDelay NOTIFY subDelayChanged)
 
 public:
     explicit MpvItem(QQuickItem *parent = nullptr);
@@ -34,10 +38,13 @@ public:
     double speed() const { return m_speed; }
     QString mediaTitle() const { return m_mediaTitle; }
     bool hasMedia() const { return m_hasMedia; }
+    QVariantList tracks() const { return m_tracks; }
+    double subDelay() const { return m_subDelay; }
 
     void setPaused(bool paused);
     void setVolume(double volume);
     void setSpeed(double speed);
+    void setSubDelay(double seconds);
 
     Q_INVOKABLE void loadFile(const QUrl &url);
     Q_INVOKABLE void togglePause();
@@ -56,6 +63,8 @@ signals:
     void speedChanged();
     void mediaTitleChanged();
     void hasMediaChanged();
+    void tracksChanged();
+    void subDelayChanged();
     void fileLoaded();
     void endOfFile();
 
@@ -77,6 +86,8 @@ private:
     double m_speed = 1.0;
     QString m_mediaTitle;
     bool m_hasMedia = false;
+    QVariantList m_tracks;
+    double m_subDelay = 0.0;
 };
 
 // Appelé depuis Rust avant la création de la fenêtre.

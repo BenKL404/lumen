@@ -10,6 +10,8 @@ Rectangle {
 
     signal openRequested()
     signal fullscreenRequested()
+    signal audioMenuRequested()
+    signal subtitleMenuRequested()
 
     height: 96
     radius: theme.radius
@@ -65,6 +67,9 @@ Rectangle {
             Row {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 spacing: 4
+
+                IconButton { theme: bar.theme; glyph: "♪"; onClicked: bar.audioMenuRequested() }
+                IconButton { theme: bar.theme; glyph: "CC"; onClicked: bar.subtitleMenuRequested() }
 
                 IconButton {
                     theme: bar.theme

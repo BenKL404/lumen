@@ -168,6 +168,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | Retour arrière    | Vitesse normale               |
 | J                 | Piste de sous-titres suivante |
 | A                 | Piste audio suivante          |
+| Z / X             | Décalage sous-titres ∓0,1 s   |
 
 ---
 

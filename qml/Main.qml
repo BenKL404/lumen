@@ -59,21 +59,65 @@ Window {
         osd(utils.fileName(pendingUrl))
     }
 
+    function selectedTrack(type) {
+        return video.tracks.find(t => t.type === type && t.selected)
+    }
+
     function saveProgress() {
-        if (currentUrl !== "")
-            history.remember(currentUrl, video.position, video.duration, video.speed)
+        if (currentUrl === "")
+            return
+        const audio = selectedTrack("audio")
+        const sub = selectedTrack("sub")
+        // Les sous-titres externes sont mémorisés par chemin : leur id change à chaque ouverture
+        const subFile = sub && sub.external ? sub["external-filename"] || "" : ""
+        const subId = sub ? (subFile !== "" ? -1 : sub.id) : (video.tracks.length > 0 ? 0 : -1)
+        history.remember(currentUrl, video.position, video.duration, video.speed,
+                         audio ? audio.id : -1, subId, video.subDelay, subFile)
+    }
+
+    function shiftSubDelay(step) {
+        const delay = Math.round((video.subDelay + step) * 10) / 10
+        video.subDelay = delay
+        osd("Décalage sous-titres " + (delay > 0 ? "+" : "") + delay.toFixed(1) + " s")
+    }
+
+    function addSubtitle(url) {
+        // « cached » : resélectionne le fichier s'il est déjà chargé au lieu d'un doublon
+        video.command(["sub-add", utils.localPath(url.toString()), "cached"])
+        osd("Sous-titres : " + utils.fileName(url.toString()))
+    }
+
+    function toggleTrackMenu(kind) {
+        if (trackMenu.visible && trackMenu.kind === kind) {
+            trackMenu.visible = false
+        } else {
+            trackMenu.kind = kind
+            trackMenu.visible = true
+        }
     }
 
     // Reprise automatique à la position enregistrée
     function resume() {
-        const position = history.savedPosition(currentUrl)
-        if (position <= 0)
+        const found = history.load(currentUrl)
+        // Le décalage est un réglage global de mpv : le remettre à zéro pour un nouveau fichier
+        video.subDelay = history.subDelay
+        if (!found)
             return
-        video.seekAbsolute(position)
-        const speed = history.savedSpeed(currentUrl)
-        if (speed > 0)
-            video.speed = speed
-        resumeBox.show(position)
+
+        if (history.audioId > 0)
+            video.command(["set", "aid", String(history.audioId)])
+        if (history.subFile !== "")
+            video.command(["sub-add", history.subFile, "cached"])
+        else if (history.subId > 0)
+            video.command(["set", "sid", String(history.subId)])
+        else if (history.subId === 0)
+            video.command(["set", "sid", "no"])
+
+        video.speed = history.speed
+        if (history.position > 0) {
+            video.seekAbsolute(history.position)
+            resumeBox.show(history.position)
+        }
     }
 
     onClosing: saveProgress()
@@ -158,7 +202,7 @@ Window {
         id: hideTimer
         interval: 2500
         onTriggered: {
-            if (video.hasMedia && !video.paused && !controls.hovered)
+            if (video.hasMedia && !video.paused && !controls.hovered && !trackMenu.visible)
                 root.controlsVisible = false
         }
     }
@@ -198,6 +242,29 @@ Window {
 
         onOpenRequested: fileDialog.open()
         onFullscreenRequested: root.toggleFullScreen()
+        onAudioMenuRequested: root.toggleTrackMenu("audio")
+        onSubtitleMenuRequested: root.toggleTrackMenu("sub")
+    }
+
+    // ------------------------------------------------ Menu des pistes
+    // Un clic en dehors du menu le ferme (sans mettre la vidéo en pause)
+    MouseArea {
+        anchors.fill: parent
+        enabled: trackMenu.visible
+        onClicked: trackMenu.visible = false
+    }
+
+    TrackMenu {
+        id: trackMenu
+        anchors { right: controls.right; bottom: controls.top; bottomMargin: 10 }
+        visible: false
+        video: video
+        utils: utils
+        theme: root.theme
+        onAddSubtitleRequested: {
+            trackMenu.visible = false
+            subtitleDialog.open()
+        }
     }
 
     // ------------------------------------------------------------- OSD
@@ -299,8 +366,13 @@ Window {
     DropArea {
         anchors.fill: parent
         onDropped: (drop) => {
-            if (drop.hasUrls && drop.urls.length > 0)
-                root.openUrl(drop.urls[0])
+            if (!drop.hasUrls || drop.urls.length === 0)
+                return
+            const url = drop.urls[0]
+            if (video.hasMedia && utils.isSubtitle(url.toString()))
+                root.addSubtitle(url)
+            else
+                root.openUrl(url)
         }
     }
 
@@ -313,6 +385,18 @@ Window {
             "Tous les fichiers (*)"
         ]
         onAccepted: root.openUrl(selectedFile)
+    }
+
+    FileDialog {
+        id: subtitleDialog
+        title: "Ajouter des sous-titres"
+        // Ouvre le dossier de la vidéo, où se trouvent en général ses sous-titres
+        currentFolder: root.currentUrl.substring(0, root.currentUrl.lastIndexOf("/"))
+        nameFilters: [
+            "Sous-titres (*.srt *.ass *.ssa *.vtt *.sub *.sup *.idx *.smi)",
+            "Tous les fichiers (*)"
+        ]
+        onAccepted: root.addSubtitle(selectedFile)
     }
 
     // ------------------------------------------------ Raccourcis clavier
@@ -334,7 +418,12 @@ Window {
     Shortcut { sequence: "Return"; onActivated: root.toggleFullScreen() }
     Shortcut {
         sequence: "Escape"
-        onActivated: if (root.visibility === Window.FullScreen) root.visibility = Window.Windowed
+        onActivated: {
+            if (trackMenu.visible)
+                trackMenu.visible = false
+            else if (root.visibility === Window.FullScreen)
+                root.visibility = Window.Windowed
+        }
     }
     Shortcut { sequence: "O"; onActivated: fileDialog.open() }
     Shortcut { sequence: "S"; onActivated: { video.screenshot(); root.osd("Capture enregistrée") } }
@@ -350,5 +439,7 @@ Window {
     }
     Shortcut { sequence: "Backspace"; onActivated: { video.speed = 1.0; root.osd("Vitesse normale") } }
     Shortcut { sequence: "J"; onActivated: { video.command(["cycle", "sub"]); root.osd("Sous-titres suivants") } }
+    Shortcut { sequence: "Z"; onActivated: root.shiftSubDelay(-0.1) }
+    Shortcut { sequence: "X"; onActivated: root.shiftSubDelay(0.1) }
     Shortcut { sequence: "A"; onActivated: { video.command(["cycle", "audio"]); root.osd("Piste audio suivante") } }
 }

@@ -14,6 +14,7 @@ fn main() {
                 "qml/ControlBar.qml",
                 "qml/IconButton.qml",
                 "qml/SeekBar.qml",
+                "qml/TrackMenu.qml",
             ],
             ..Default::default()
         })
