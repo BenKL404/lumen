@@ -1,7 +1,7 @@
 import QtQuick
 
 // Menu déroulant avec un niveau de sous-menus. Chaque entrée est un objet :
-//   { label, shortcut, icon, checked, enabled, action }   entrée simple
+//   { label, shortcut, icon, checked, enabled, action }   entrée simple (`icon` : nom d'une Icon)
 //   { label, icon, submenu: [ …entrées… ] }               ouvre un sous-menu
 //   { separator: true }
 Item {
@@ -61,7 +61,9 @@ Item {
         signal hoveredEntry(var entry, Item item)
 
         width: 290
-        height: column.implicitHeight + 12
+        // Calculée depuis les entrées (et non depuis la colonne) : exacte dès l'ouverture,
+        // avant que les délégués soient créés, pour positionner le menu au bon endroit
+        height: 12 + model.reduce((h, e) => h + (e.separator ? 9 : 30), 0)
         radius: 10
         color: theme.menu
         border.color: theme.border
@@ -101,13 +103,12 @@ Item {
                         color: entryArea.containsMouse && entry.isEnabled ? panel.theme.surfaceHover : "transparent"
 
                         // Coche, ou icône de l'entrée
-                        Text {
-                            anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
-                            width: 18
-                            horizontalAlignment: Text.AlignHCenter
-                            text: entry.modelData.checked ? "✓" : (entry.modelData.icon || "")
+                        Icon {
+                            anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
+                            name: entry.modelData.checked ? "check" : (entry.modelData.icon || "")
+                            size: 15
+                            strokeWidth: entry.modelData.checked ? 2.5 : 1.8
                             color: entry.modelData.checked ? panel.theme.accent : panel.theme.muted
-                            font.pixelSize: 13
                         }
                         Text {
                             anchors { left: parent.left; leftMargin: 34; right: rightText.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
@@ -116,12 +117,27 @@ Item {
                             font.pixelSize: 13
                             elide: Text.ElideRight
                         }
-                        Text {
+                        Item {
                             id: rightText
                             anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                            text: entry.hasSubmenu ? "▸" : (entry.modelData.shortcut || "")
-                            color: panel.theme.muted
-                            font.pixelSize: 12
+                            width: entry.hasSubmenu ? 14 : shortcutText.implicitWidth
+                            height: 14
+
+                            Text {
+                                id: shortcutText
+                                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                                visible: !entry.hasSubmenu
+                                text: entry.modelData.shortcut || ""
+                                color: panel.theme.muted
+                                font.pixelSize: 12
+                            }
+                            Icon {
+                                anchors.centerIn: parent
+                                visible: entry.hasSubmenu
+                                name: "chevron-right"
+                                size: 14
+                                color: panel.theme.muted
+                            }
                         }
                         MouseArea {
                             id: entryArea

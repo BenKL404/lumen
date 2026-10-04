@@ -1,16 +1,24 @@
 import QtQuick
 
+// Bouton rond : une icône vectorielle (`icon`) ou, à défaut, un court texte (`glyph`, ex. « ×1 »)
 Item {
     id: button
 
     property var theme
+    property string icon
     property string glyph
+    property bool filled: false
+    property real iconSize: 18
     property bool emphasized: false
+    // Option activée (répétition, aléatoire…) : icône en couleur d'accent
+    property bool active: false
+
+    readonly property color contentColor: emphasized ? "#1A1206" : active ? theme.accent : theme.text
 
     signal clicked()
 
-    implicitWidth: Math.max(38, label.implicitWidth + 18)
-    implicitHeight: 38
+    implicitWidth: icon !== "" ? 36 : Math.max(36, label.implicitWidth + 16)
+    implicitHeight: 36
     opacity: enabled ? 1 : 0.35
 
     Rectangle {
@@ -23,12 +31,23 @@ Item {
         Behavior on color { ColorAnimation { duration: 120 } }
     }
 
+    Icon {
+        anchors.centerIn: parent
+        visible: button.icon !== ""
+        name: button.icon
+        size: button.iconSize
+        filled: button.filled
+        color: button.contentColor
+        scale: area.pressed ? 0.92 : 1
+    }
+
     Text {
         id: label
         anchors.centerIn: parent
+        visible: button.icon === ""
         text: button.glyph
-        color: button.emphasized ? "#1A1206" : button.theme.text
-        font.pixelSize: 15
+        color: button.contentColor
+        font.pixelSize: 13
         font.weight: Font.DemiBold
     }
 

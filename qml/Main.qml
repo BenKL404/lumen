@@ -40,6 +40,11 @@ Window {
     // En fenêtré, la playlist est ancrée à droite et réduit la zone vidéo ;
     // en plein écran, elle glisse par-dessus l'image.
     readonly property bool playlistDocked: playlistPanel.open && !fullscreen
+    // En fenêtré, la playlist est accolée au bord droit : la fenêtre s'élargit d'autant
+    // et la vidéo garde sa taille. Fenêtre agrandie, elle prend place dans la fenêtre.
+    property int attachedWidth: 0
+    readonly property int playlistWidth: 360
+    readonly property bool playlistAttached: playlistPanel.open && attachedWidth > 0 && visibility === Window.Windowed
 
     // Média en cours (clé de l'historique) ; vide tant que le fichier n'est pas chargé,
     // pour ne jamais enregistrer la position d'un fichier sous le nom d'un autre.
@@ -51,6 +56,7 @@ Window {
 
     readonly property var menuEntries: [
         { label: "Ouvrir un fichier…", shortcut: "O", action: () => fileDialog.open() },
+        { label: "Ouvrir un dossier…", shortcut: "Ctrl+O", action: () => folderDialog.open() },
         { label: "Ajouter des sous-titres…", action: () => subtitleDialog.open() },
         { separator: true },
         { label: "Lecture / pause", shortcut: "Espace", action: () => video.togglePause() },
@@ -58,6 +64,8 @@ Window {
         { label: "Capture d'écran", shortcut: "S", action: () => root.screenshot() },
         { separator: true },
         { label: "Playlist", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
+        { label: "Lecture aléatoire", shortcut: "H", checked: playlist.shuffle, action: () => root.toggleShuffle() },
+        { label: "Répéter : " + root.repeatNames[playlist.repeatMode], shortcut: "R", checked: playlist.repeatMode !== 0, action: () => root.cycleRepeat() },
         { label: "Plein écran", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
         { label: "Toujours au premier plan", checked: root.pinned, action: () => root.pinned = !root.pinned },
         { separator: true },
@@ -84,15 +92,21 @@ Window {
         })
 
         return [
-            { label: "Ouvrir un fichier…", icon: "⏏", shortcut: "O", action: () => fileDialog.open() },
+            { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: "O", action: () => fileDialog.open() },
+            { label: "Ouvrir un dossier…", icon: "folder", shortcut: "Ctrl+O", action: () => folderDialog.open() },
             { label: "Ajouter à la playlist…", action: () => addDialog.open() },
             { separator: true },
-            { label: "Lecture", icon: "▶", enabled: has, submenu: [
-                { label: video.paused ? "Lecture" : "Pause", icon: video.paused ? "▶" : "❚❚", shortcut: "Espace", action: () => video.togglePause() },
-                { label: "Arrêter", icon: "■", action: () => root.stop() },
+            { label: "Lecture", icon: "play", enabled: has, submenu: [
+                { label: video.paused ? "Lecture" : "Pause", icon: video.paused ? "play" : "pause", shortcut: "Espace", action: () => video.togglePause() },
+                { label: "Arrêter", icon: "stop", action: () => root.stop() },
                 { separator: true },
-                { label: "Précédent", icon: "⏮", shortcut: "PgUp", enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
-                { label: "Suivant", icon: "⏭", shortcut: "PgDn", enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
+                { label: "Précédent", icon: "skip-back", shortcut: "PgUp", enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
+                { label: "Suivant", icon: "skip-forward", shortcut: "PgDn", enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
+                { separator: true },
+                { label: "Lecture aléatoire", icon: "shuffle", shortcut: "H", checked: playlist.shuffle, action: () => root.toggleShuffle() },
+                { label: "Ne pas répéter", checked: playlist.repeatMode === 0, action: () => root.setRepeat(0) },
+                { label: "Répéter le fichier", checked: playlist.repeatMode === 1, action: () => root.setRepeat(1) },
+                { label: "Répéter la playlist", checked: playlist.repeatMode === 2, action: () => root.setRepeat(2) },
                 { separator: true },
                 { label: "Reculer de 5 s", shortcut: "←", action: () => root.seekBy(-5) },
                 { label: "Avancer de 5 s", shortcut: "→", action: () => root.seekBy(5) },
@@ -101,7 +115,7 @@ Window {
                 { label: "Image précédente", shortcut: ",", action: () => video.frameStep(false) },
                 { label: "Image suivante", shortcut: ".", action: () => video.frameStep(true) }
             ] },
-            { label: "Vitesse", icon: "×", enabled: has, submenu:
+            { label: "Vitesse", icon: "gauge", enabled: has, submenu:
                 [0.5, 0.75, 1, 1.25, 1.5, 2].map(v => ({
                     label: v === 1 ? "×1 (normale)" : "×" + String(v).replace(".", ","),
                     shortcut: v === 1 ? "Retour arr." : "",
@@ -109,7 +123,7 @@ Window {
                     action: () => root.setSpeed(v)
                 }))
             },
-            { label: "Audio", icon: "♪", enabled: has, submenu:
+            { label: "Audio", icon: "music", enabled: has, submenu:
                 (audioTracks.length > 0 ? audioTracks.map(t => trackEntry(t, "aid"))
                                         : [{ label: "Aucune piste audio", enabled: false }]).concat([
                 { separator: true },
@@ -117,7 +131,7 @@ Window {
                 { label: "Augmenter le volume", shortcut: "↑", action: () => root.changeVolume(5) },
                 { label: "Baisser le volume", shortcut: "↓", action: () => root.changeVolume(-5) }
             ]) },
-            { label: "Sous-titres", icon: "≡", enabled: has, submenu:
+            { label: "Sous-titres", icon: "captions", enabled: has, submenu:
                 [{ label: "Désactivés", checked: !subTracks.some(t => t.selected), action: () => video.command(["set", "sid", "no"]) }]
                 .concat(subTracks.map(t => trackEntry(t, "sid")), [
                 { separator: true },
@@ -126,20 +140,20 @@ Window {
                 { label: "Décaler de +0,1 s", shortcut: "X", action: () => root.shiftSubDelay(0.1) },
                 { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
             ]) },
-            { label: "Vidéo", icon: "▣", enabled: has, submenu: [
-                { label: "Plein écran", icon: "⤢", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
-                { label: "Capture d'écran", icon: "◉", shortcut: "S", action: () => root.screenshot() },
+            { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
+                { label: "Plein écran", icon: "maximize", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
+                { label: "Capture d'écran", icon: "camera", shortcut: "S", action: () => root.screenshot() },
                 { separator: true },
                 aspectEntry("Format automatique", "-1"),
                 aspectEntry("16:9", "16:9"),
                 aspectEntry("4:3", "4:3"),
                 aspectEntry("2,35:1", "2.35:1"),
                 { separator: true },
-                { label: "Pivoter de 90°", icon: "↻", checked: root.rotation !== 0, action: () => root.rotate() }
+                { label: "Pivoter de 90°", icon: "rotate-cw", checked: root.rotation !== 0, action: () => root.rotate() }
             ] },
             { separator: true },
-            { label: "Playlist", icon: "☰", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
-            { label: "Toujours au premier plan", icon: "⚲", checked: root.pinned, action: () => root.pinned = !root.pinned },
+            { label: "Playlist", icon: "list", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
+            { label: "Toujours au premier plan", icon: "pin", checked: root.pinned, action: () => root.pinned = !root.pinned },
             { separator: true },
             { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
         ]
@@ -151,6 +165,34 @@ Window {
         contextMenu.entries = contextEntries()
         const p = item.mapToItem(contextMenu.parent, x, y)
         contextMenu.popupAt(p.x, p.y)
+    }
+
+    readonly property var repeatNames: ["désactivé", "le fichier", "la playlist"]
+
+    function cycleRepeat() {
+        playlist.cycleRepeat()
+        osd(playlist.repeatMode === 0 ? "Répétition désactivée" : "Répéter " + repeatNames[playlist.repeatMode])
+    }
+
+    function setRepeat(mode) {
+        while (playlist.repeatMode !== mode)
+            playlist.cycleRepeat()
+        osd(mode === 0 ? "Répétition désactivée" : "Répéter " + repeatNames[mode])
+    }
+
+    function toggleShuffle() {
+        playlist.toggleShuffle()
+        osd(playlist.shuffle ? "Lecture aléatoire" : "Lecture dans l'ordre")
+    }
+
+    function openFolder(url) {
+        const first = playlist.openFolder(url.toString())
+        if (first === "") {
+            osd("Aucun fichier audio ou vidéo dans ce dossier")
+            return
+        }
+        openUrl(first)
+        setPlaylistOpen(true)
     }
 
     function seekBy(seconds) {
@@ -199,7 +241,23 @@ Window {
     }
 
     function togglePlaylist() {
-        playlistPanel.open = !playlistPanel.open
+        setPlaylistOpen(!playlistPanel.open)
+    }
+
+    function setPlaylistOpen(open) {
+        if (open === playlistPanel.open)
+            return
+        if (visibility === Window.Windowed) {
+            if (open) {
+                attachedWidth = playlistWidth
+                width += attachedWidth
+            } else if (attachedWidth > 0) {
+                width -= attachedWidth
+            }
+        }
+        if (!open)
+            attachedWidth = 0
+        playlistPanel.open = open
     }
 
     function closePopups() {
@@ -207,7 +265,7 @@ Window {
         appMenu.close()
         contextMenu.close()
         if (fullscreen)
-            playlistPanel.open = false
+            setPlaylistOpen(false)
     }
 
     function osd(message) {
@@ -224,6 +282,10 @@ Window {
     }
 
     function openUrl(url) {
+        if (utils.isFolder(url.toString())) {
+            openFolder(url)
+            return
+        }
         saveProgress()
         currentUrl = ""
         pendingUrl = url.toString()
@@ -313,7 +375,11 @@ Window {
 
     Utils { id: utils }
     History { id: history }
-    Playlist { id: playlist }
+    Playlist {
+        id: playlist
+        // « Répéter le fichier » est confié à mpv : la fin du fichier n'est alors jamais atteinte
+        onRepeatModeChanged: video.command(["set", "loop-file", repeatMode === 1 ? "inf" : "no"])
+    }
 
     // Sauvegarde régulière : la position survit à un plantage ou à une coupure
     Timer {
@@ -337,7 +403,7 @@ Window {
     // ---------------------------------------------------- Barre de titre
     TitleBar {
         id: titleBar
-        anchors { left: parent.left; right: parent.right; top: parent.top }
+        anchors { left: parent.left; right: root.playlistAttached ? playlistPanel.left : parent.right; top: parent.top }
         visible: !root.fullscreen
         window: root
         theme: root.theme
@@ -369,7 +435,17 @@ Window {
                     root.saveProgress()
             }
             // Fin de la vidéo : enchaîner sur la suivante de la playlist
-            onEofReachedChanged: if (eofReached && root.hasNext) root.playAt(playlist.nextIndex)
+            onEofReachedChanged: {
+                if (!eofReached || playlist.nextIndex < 0)
+                    return
+                // Répéter une playlist d'un seul fichier : le relancer depuis le début
+                if (playlist.nextIndex === playlist.current) {
+                    video.seekAbsolute(0)
+                    video.paused = false
+                } else {
+                    root.playAt(playlist.nextIndex)
+                }
+            }
             onFileLoaded: {
                 root.currentUrl = root.pendingUrl
                 saveTimer.restart()
@@ -583,6 +659,10 @@ Window {
         onPreviousRequested: root.playAt(playlist.previousIndex)
         onNextRequested: root.playAt(playlist.nextIndex)
         onPlaylistRequested: root.togglePlaylist()
+        repeatMode: playlist.repeatMode
+        shuffle: playlist.shuffle
+        onRepeatRequested: root.cycleRepeat()
+        onShuffleRequested: root.toggleShuffle()
         onSettingsRequested: (anchor) => {
             trackMenu.visible = false
             appMenu.popup(anchor, true)
@@ -600,8 +680,8 @@ Window {
     // ------------------------------------------------------------- Playlist
     PlaylistPanel {
         id: playlistPanel
-        anchors { top: root.fullscreen ? parent.top : titleBar.bottom; bottom: parent.bottom }
-        width: root.fullscreen ? Math.min(400, root.width * 0.4) : 340
+        anchors { top: root.fullscreen || root.playlistAttached ? parent.top : titleBar.bottom; bottom: parent.bottom }
+        width: root.fullscreen ? Math.min(400, root.width * 0.4) : root.playlistWidth
         x: open ? root.width - width : root.width
         visible: open || x < root.width
         Behavior on x {
@@ -611,8 +691,20 @@ Window {
         playlist: playlist
         utils: utils
         theme: root.theme
+        window: root
+        attached: root.playlistAttached
         onActivated: (index) => root.playAt(index)
-        onAddRequested: addDialog.open()
+        // « Ajouter » : des fichiers ou tout un dossier
+        onAddRequested: (anchor) => {
+            trackMenu.visible = false
+            appMenu.close()
+            contextMenu.entries = [
+                { label: "Des fichiers…", icon: "folder-open", action: () => addDialog.open() },
+                { label: "Un dossier…", icon: "folder", action: () => addFolderDialog.open() }
+            ]
+            contextMenu.popup(anchor, true)
+        }
+        onCloseRequested: root.setPlaylistOpen(false)
     }
 
     // ------------------------------------------------------------ Menus
@@ -682,6 +774,18 @@ Window {
         onAccepted: root.openUrl(selectedFile)
     }
 
+    FolderDialog {
+        id: folderDialog
+        title: "Ouvrir un dossier"
+        onAccepted: root.openFolder(selectedFolder)
+    }
+
+    FolderDialog {
+        id: addFolderDialog
+        title: "Ajouter un dossier à la playlist"
+        onAccepted: playlist.addFolder(selectedFolder.toString())
+    }
+
     FileDialog {
         id: addDialog
         title: "Ajouter à la playlist"
@@ -720,13 +824,16 @@ Window {
             if (trackMenu.visible || appMenu.visible || contextMenu.visible) {
                 root.closePopups()
             } else if (playlistPanel.open) {
-                playlistPanel.open = false
+                root.setPlaylistOpen(false)
             } else if (root.fullscreen) {
                 root.toggleFullScreen()
             }
         }
     }
     Shortcut { sequence: "O"; onActivated: fileDialog.open() }
+    Shortcut { sequence: "Ctrl+O"; onActivated: folderDialog.open() }
+    Shortcut { sequence: "R"; onActivated: root.cycleRepeat() }
+    Shortcut { sequence: "H"; onActivated: root.toggleShuffle() }
     Shortcut { sequence: "S"; onActivated: root.screenshot() }
     Shortcut { sequence: "Ctrl+Q"; onActivated: root.close() }
     Shortcut { sequence: "."; onActivated: video.frameStep(true) }

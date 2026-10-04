@@ -18,6 +18,7 @@ fn main() {
                 "qml/PlaylistPanel.qml",
                 "qml/TitleBar.qml",
                 "qml/AppMenu.qml",
+                "qml/Icon.qml",
             ],
             ..Default::default()
         })
