@@ -1,14 +1,19 @@
 import QtQuick
 
-// Playlist : ancrée à droite de la vidéo en mode fenêtré, flottante en plein écran.
-// Clic : sélectionner ; double-clic ou Entrée : lire ; barre d'outils : réorganiser, ajouter, retirer, trier.
+// Playlist. En mode fenêtré, elle est accolée au bord droit de la fenêtre comme une
+// extension (la fenêtre s'élargit, la vidéo garde sa taille) ; fenêtre agrandie, elle
+// réduit la zone vidéo ; en plein écran, elle flotte par-dessus l'image.
+// Clic : sélectionner ; double-clic : lire ; barre du bas : réorganiser, ajouter, retirer, trier, rechercher.
 Rectangle {
     id: panel
 
     property var playlist
     property var utils
     property var theme
+    property var window
     property bool open: false
+    // Accolée à la fenêtre : a sa propre barre de titre, qui sert aussi à déplacer la fenêtre
+    property bool attached: false
     property int selected: -1
     property string filter: ""
 
@@ -16,7 +21,8 @@ Rectangle {
     readonly property real totalDuration: playlist.durations.reduce((sum, d) => d > 0 ? sum + d : sum, 0)
 
     signal activated(int index)
-    signal addRequested()
+    signal addRequested(Item anchor)
+    signal closeRequested()
 
     function matches(index) {
         return filter === "" || utils.fileName(playlist.items[index]).toLowerCase().indexOf(filter.toLowerCase()) >= 0
@@ -38,8 +44,13 @@ Rectangle {
         selected = Math.min(selected, count - 1)
     }
 
+    function closeSearch() {
+        search.text = ""
+        search.focus = false
+        toolbar.searching = false
+    }
+
     color: theme.chrome
-    border.color: theme.border
 
     // Absorbe les clics : ne pas mettre en pause en cliquant dans le panneau
     MouseArea { anchors.fill: parent }
@@ -48,20 +59,37 @@ Rectangle {
         if (open) {
             selected = playlist.current
             list.positionViewAtIndex(Math.max(0, playlist.current), ListView.Center)
+        } else {
+            closeSearch()
         }
     }
 
+    // Séparation avec la fenêtre principale
+    Rectangle {
+        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+        width: panel.attached ? 2 : 1
+        color: panel.attached ? "#000000" : panel.theme.border
+        z: 1
+    }
+
     // ------------------------------------------------------------ En-tête
-    Item {
+    Rectangle {
         id: header
         anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: 44
+        height: 36
+        color: panel.attached ? panel.theme.chrome : "transparent"
+
+        DragHandler {
+            target: null
+            enabled: panel.attached
+            onActiveChanged: if (active) panel.window.startSystemMove()
+        }
 
         Text {
-            anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
+            anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
             text: "Playlist"
             color: panel.theme.text
-            font.pixelSize: 14
+            font.pixelSize: 13
             font.weight: Font.DemiBold
         }
         Text {
@@ -72,13 +100,25 @@ Rectangle {
             font.pixelSize: 12
             font.family: "monospace"
         }
-        IconButton {
+        Rectangle {
             id: closeButton
-            anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
-            implicitHeight: 30
-            theme: panel.theme
-            glyph: "✕"
-            onClicked: panel.open = false
+            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+            width: 42
+            color: closeArea.containsMouse ? "#C42B1C" : "transparent"
+
+            Icon {
+                anchors.centerIn: parent
+                name: "x"
+                size: 15
+                strokeWidth: 1.8
+                color: panel.theme.text
+            }
+            MouseArea {
+                id: closeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: panel.closeRequested()
+            }
         }
         Rectangle {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
@@ -87,39 +127,10 @@ Rectangle {
         }
     }
 
-    // Recherche
-    Rectangle {
-        id: searchBox
-        anchors { left: parent.left; right: parent.right; top: header.bottom; margins: 8 }
-        height: 26
-        radius: 4
-        color: Qt.rgba(0, 0, 0, 0.25)
-        border.color: search.activeFocus ? panel.theme.accent : panel.theme.border
-
-        TextInput {
-            id: search
-            anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
-            verticalAlignment: TextInput.AlignVCenter
-            color: panel.theme.text
-            selectionColor: panel.theme.accent
-            font.pixelSize: 12
-            clip: true
-            onTextChanged: panel.filter = text
-            Keys.onEscapePressed: { text = ""; focus = false }
-        }
-        Text {
-            anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
-            visible: search.text === "" && !search.activeFocus
-            text: "⌕  Rechercher"
-            color: panel.theme.muted
-            font.pixelSize: 12
-        }
-    }
-
     // ------------------------------------------------------------ Liste
     ListView {
         id: list
-        anchors { left: parent.left; right: parent.right; top: searchBox.bottom; bottom: toolbar.top; margins: 6 }
+        anchors { left: parent.left; right: parent.right; top: header.bottom; bottom: toolbar.top; margins: 6 }
         clip: true
         model: panel.playlist.items
         boundsBehavior: Flickable.StopAtBounds
@@ -190,12 +201,15 @@ Rectangle {
         }
     }
 
-    // ------------------------------------------------------ Barre d'outils
-    Rectangle {
+    // ------------------------------------------------- Barre d'outils (bas)
+    Item {
         id: toolbar
+
+        // Recherche ouverte : le champ remplace les boutons
+        property bool searching: false
+
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: 44
-        color: "transparent"
 
         Rectangle {
             anchors { left: parent.left; right: parent.right; top: parent.top }
@@ -208,17 +222,27 @@ Rectangle {
 
             property var theme
             property string label
+            property string icon
             signal clicked()
 
-            implicitWidth: Math.max(24, tbText.implicitWidth + 14)
+            implicitWidth: icon !== "" ? 26 : Math.max(26, tbText.implicitWidth + 14)
             height: 24
             radius: 4
             opacity: enabled ? 1 : 0.35
             color: tbArea.pressed ? Qt.rgba(1, 1, 1, 0.16) : tbArea.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.05)
 
+            Icon {
+                anchors.centerIn: parent
+                visible: tb.icon !== ""
+                name: tb.icon
+                size: 14
+                strokeWidth: 2.2
+                color: tb.theme.text
+            }
             Text {
                 id: tbText
                 anchors.centerIn: parent
+                visible: tb.icon === ""
                 text: tb.label
                 color: tb.theme.text
                 font.pixelSize: 11
@@ -234,20 +258,65 @@ Rectangle {
 
         Row {
             id: tools
+            visible: !toolbar.searching
             anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
             spacing: 3
 
             readonly property bool hasSelection: panel.selected >= 0 && panel.selected < panel.count
 
-            ToolButton { theme: panel.theme; label: "⇈"; enabled: tools.hasSelection; onClicked: panel.moveSelected(0) }
-            ToolButton { theme: panel.theme; label: "▲"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected - 1) }
-            ToolButton { theme: panel.theme; label: "▼"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected + 1) }
-            ToolButton { theme: panel.theme; label: "⇊"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.count - 1) }
+            ToolButton { theme: panel.theme; icon: "arrow-up-to-line"; enabled: tools.hasSelection; onClicked: panel.moveSelected(0) }
+            ToolButton { theme: panel.theme; icon: "chevron-up"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected - 1) }
+            ToolButton { theme: panel.theme; icon: "chevron-down"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected + 1) }
+            ToolButton { theme: panel.theme; icon: "arrow-down-to-line"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.count - 1) }
             Item { width: 5; height: 1 }
-            ToolButton { theme: panel.theme; label: "AJOUTER"; onClicked: panel.addRequested() }
+            ToolButton { id: addButton; theme: panel.theme; label: "AJOUTER"; onClicked: panel.addRequested(addButton) }
             ToolButton { theme: panel.theme; label: "RETIRER"; enabled: tools.hasSelection; onClicked: panel.removeSelected() }
             ToolButton { theme: panel.theme; label: "TRIER"; enabled: panel.count > 1; onClicked: panel.playlist.sort() }
         }
 
+        // Champ de recherche, ouvert par la loupe
+        Rectangle {
+            visible: toolbar.searching
+            anchors { left: parent.left; leftMargin: 8; right: searchButton.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
+            height: 26
+            radius: 4
+            color: Qt.rgba(0, 0, 0, 0.25)
+            border.color: search.activeFocus ? panel.theme.accent : panel.theme.border
+
+            TextInput {
+                id: search
+                anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
+                verticalAlignment: TextInput.AlignVCenter
+                color: panel.theme.text
+                selectionColor: panel.theme.accent
+                font.pixelSize: 12
+                clip: true
+                onTextChanged: panel.filter = text
+                Keys.onEscapePressed: panel.closeSearch()
+            }
+            Text {
+                anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
+                visible: search.text === ""
+                text: "Rechercher dans la playlist"
+                color: panel.theme.muted
+                font.pixelSize: 12
+            }
+        }
+
+        // Loupe : ouvre la recherche ; ✕ : la ferme et l'efface
+        ToolButton {
+            id: searchButton
+            anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
+            theme: panel.theme
+            icon: toolbar.searching ? "x" : "search"
+            onClicked: {
+                if (toolbar.searching) {
+                    panel.closeSearch()
+                } else {
+                    toolbar.searching = true
+                    search.forceActiveFocus()
+                }
+            }
+        }
     }
 }

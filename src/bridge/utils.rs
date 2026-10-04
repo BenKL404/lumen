@@ -50,6 +50,11 @@ pub mod qobject {
         #[cxx_name = "localPath"]
         fn local_path(self: &Utils, url: &QString) -> QString;
 
+        /// Vrai si l'URL désigne un dossier local
+        #[qinvokable]
+        #[cxx_name = "isFolder"]
+        fn is_folder(self: &Utils, url: &QString) -> bool;
+
         /// Vrai si l'URL désigne un fichier de sous-titres (.srt, .ass…)
         #[qinvokable]
         #[cxx_name = "isSubtitle"]
@@ -112,6 +117,10 @@ impl qobject::Utils {
 
     pub fn local_path(&self, url: &QString) -> QString {
         QString::from(&local_path(&url.to_string()))
+    }
+
+    pub fn is_folder(&self, url: &QString) -> bool {
+        std::path::Path::new(&local_path(&url.to_string())).is_dir()
     }
 
     pub fn is_subtitle(&self, url: &QString) -> bool {

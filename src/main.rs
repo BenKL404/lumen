@@ -5,6 +5,8 @@ mod bridge;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 
 fn main() {
+    use_desktop_portal();
+
     // Doit être appelé avant la création de la fenêtre :
     // force le rendu OpenGL et enregistre le composant vidéo pour QML.
     bridge::video::ffi::lumen_init_video();
@@ -44,5 +46,16 @@ fn main() {
 
     if let Some(app) = app.as_mut() {
         app.exec();
+    }
+}
+
+/// Dialogues natifs du bureau (sélecteur de fichiers de COSMIC, GNOME, KDE…) via le
+/// portail XDG, plutôt que le dialogue intégré de Qt. Ne remplace que les valeurs
+/// sans effet en Qt 6 (variable absente, ou thème réservé à Qt 5 comme `qt5ct`) :
+/// un thème Qt 6 choisi explicitement est respecté.
+fn use_desktop_portal() {
+    let current = std::env::var("QT_QPA_PLATFORMTHEME").unwrap_or_default();
+    if current.is_empty() || current == "qt5ct" {
+        std::env::set_var("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
     }
 }

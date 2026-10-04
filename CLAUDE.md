@@ -38,7 +38,9 @@ Three layers, all wired together by `build.rs` (`cxx-qt-build`):
 
 Window layout (`Main.qml`): frameless window with a QML `TitleBar` (drag via `startSystemMove`, edge `ResizeEdge`s via `startSystemResize`); in windowed mode the `ControlBar` sits below the video and the `PlaylistPanel` is docked right, shrinking the `stage` item; in fullscreen both float over the video and auto-hide. `AppMenu` is the shared dropdown (title-bar « Lumen ▾ » and ⚙). Glyph icons must exist in the system fonts — check with `fc-list ":charset=<hex>"` (e.g. 📌 renders as tofu here).
 
-`lumen <file>` opens a file at startup. For visual checks without screen capture: `LUMEN_SNAPSHOT=out.png [LUMEN_SNAPSHOT_DELAY=ms] cargo run -- video.mkv` saves the window image then quits (set `XDG_DATA_HOME` to a temp dir to keep the real history untouched). `MpvItem` queues `loadFile` until the GL render context exists, otherwise mpv starts without video output.
+`main.rs` sets `QT_QPA_PLATFORMTHEME=xdgdesktopportal` when the variable is unset or `qt5ct` (Qt5-only), so `FileDialog`/`FolderDialog` use the desktop's native picker through the XDG portal (needs `qt6-xdgdesktopportal-platformtheme`). `AppMenu` panel height is computed from its entries, not from the column, so `popup(anchor, above)` positions correctly on first open.
+
+`lumen <file|folder>` opens a file (or a whole folder as the playlist) at startup. For visual checks without screen capture: `LUMEN_SNAPSHOT=out.png [LUMEN_SNAPSHOT_DELAY=ms] cargo run -- video.mkv` saves the window image then quits (set `XDG_DATA_HOME` to a temp dir to keep the real history untouched). Prefer `QT_QPA_PLATFORM=offscreen` for UI-only checks: an on-screen window steals keyboard focus from the user (their keystrokes trigger Lumen shortcuts); offscreen has no GL, so no video frame. `MpvItem` queues `loadFile` until the GL render context exists, otherwise mpv starts without video output.
 
 Adding files requires registering them in `build.rs`: QML files and Rust QObject files in the `QmlModule` (`qml_files` / `rust_files`), other CXX bridges via `.file(...)`, C++ sources in `cc_builder`.
 

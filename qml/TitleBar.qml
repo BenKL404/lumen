@@ -41,18 +41,30 @@ Rectangle {
         // Menu principal « Lumen ▾ »
         Rectangle {
             id: menuButton
-            width: menuLabel.implicitWidth + 20
+            width: menuContent.implicitWidth + 20
             height: 26
             radius: 6
             color: menuArea.containsMouse ? bar.theme.surfaceHover : "transparent"
 
-            Text {
-                id: menuLabel
+            Row {
+                id: menuContent
                 anchors.centerIn: parent
-                text: "Lumen  ▾"
-                color: bar.theme.accent
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                spacing: 4
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Lumen"
+                    color: bar.theme.accent
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                }
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "chevron-down"
+                    size: 14
+                    strokeWidth: 2.5
+                    color: bar.theme.accent
+                }
             }
             MouseArea {
                 id: menuArea
@@ -96,7 +108,7 @@ Rectangle {
         id: wb
 
         property var theme
-        property string glyph
+        property string icon
         property bool active: false
         property color hoverColor: theme.surfaceHover
         signal clicked()
@@ -105,11 +117,12 @@ Rectangle {
         height: 36
         color: wbArea.containsMouse ? hoverColor : "transparent"
 
-        Text {
+        Icon {
             anchors.centerIn: parent
-            text: wb.glyph
+            name: wb.icon
+            size: 15
+            strokeWidth: 1.8
             color: wb.active ? wb.theme.accent : wb.theme.text
-            font.pixelSize: 13
         }
         MouseArea {
             id: wbArea
@@ -123,13 +136,13 @@ Rectangle {
         id: windowButtons
         anchors { right: parent.right; top: parent.top }
 
-        WindowButton { theme: bar.theme; glyph: "⚲"; active: bar.pinned; onClicked: bar.pinToggled() }
-        WindowButton { theme: bar.theme; glyph: "─"; onClicked: bar.window.showMinimized() }
+        WindowButton { theme: bar.theme; icon: "pin"; active: bar.pinned; onClicked: bar.pinToggled() }
+        WindowButton { theme: bar.theme; icon: "window-minimize"; onClicked: bar.window.showMinimized() }
         WindowButton {
             theme: bar.theme
-            glyph: bar.window.visibility === Window.Maximized ? "❐" : "☐"
+            icon: bar.window.visibility === Window.Maximized ? "window-restore" : "window-maximize"
             onClicked: bar.maximizeToggled()
         }
-        WindowButton { theme: bar.theme; glyph: "✕"; hoverColor: "#C42B1C"; onClicked: bar.window.close() }
+        WindowButton { theme: bar.theme; icon: "x"; hoverColor: "#C42B1C"; onClicked: bar.window.close() }
     }
 }

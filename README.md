@@ -18,8 +18,11 @@ sudo apt install qt6-base-dev qt6-declarative-dev qmake6 libmpv-dev pkg-config l
   qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtquick-dialogs \
   qml6-module-qtqml qml6-module-qtqml-workerscript qml6-module-qtqml-models \
   qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts \
-  qml6-module-qt-labs-folderlistmodel
+  qml6-module-qt-labs-folderlistmodel qt6-xdgdesktopportal-platformtheme
 ```
+
+`qt6-xdgdesktopportal-platformtheme` donne les dialogues natifs du bureau (sélecteur de fichiers
+de COSMIC, GNOME, KDE…). Sans lui, Qt affiche son propre dialogue.
 
 Les modules `qml6-module-*` ne sont vérifiés qu'au lancement : s'il en manque un, la compilation
 réussit mais la fenêtre ne s'ouvre pas (`module "…" is not installed`). `QtQuick.Dialogs` a besoin

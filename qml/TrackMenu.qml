@@ -151,7 +151,7 @@ Rectangle {
                 anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
                 spacing: 2
 
-                IconButton { theme: menu.theme; glyph: "−"; onClicked: menu.shiftDelay(-0.1) }
+                IconButton { theme: menu.theme; icon: "minus"; onClicked: menu.shiftDelay(-0.1) }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 64
@@ -161,8 +161,8 @@ Rectangle {
                     font.pixelSize: 14
                     font.family: "monospace"
                 }
-                IconButton { theme: menu.theme; glyph: "+"; onClicked: menu.shiftDelay(0.1) }
-                IconButton { theme: menu.theme; glyph: "↺"; onClicked: menu.video.subDelay = 0 }
+                IconButton { theme: menu.theme; icon: "plus"; onClicked: menu.shiftDelay(0.1) }
+                IconButton { theme: menu.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: menu.video.subDelay = 0 }
             }
         }
     }

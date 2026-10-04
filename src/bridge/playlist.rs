@@ -30,7 +30,22 @@ pub mod qobject {
         #[qproperty(i32, current)]
         #[qproperty(i32, next_index)]
         #[qproperty(i32, previous_index)]
+        // `repeatMode` : 0 désactivé, 1 le fichier, 2 la playlist
+        #[qproperty(i32, repeat_mode, READ, NOTIFY)]
+        #[qproperty(bool, shuffle, READ, NOTIFY)]
         type Playlist = super::PlaylistRust;
+
+        /// Remplace la playlist par les fichiers audio et vidéo d'un dossier.
+        /// Renvoie l'URL du premier fichier à lire (vide si le dossier n'en contient pas).
+        #[qinvokable]
+        fn open_folder(self: Pin<&mut Playlist>, url: &QString) -> QString;
+
+        /// Désactivé → répéter le fichier → répéter la playlist → désactivé
+        #[qinvokable]
+        fn cycle_repeat(self: Pin<&mut Playlist>);
+
+        #[qinvokable]
+        fn toggle_shuffle(self: Pin<&mut Playlist>);
 
         /// À appeler à chaque ouverture : se place sur le fichier s'il est déjà dans
         /// la playlist, sinon reconstruit la playlist depuis son dossier.
@@ -40,6 +55,10 @@ pub mod qobject {
         /// Ajoute des fichiers en fin de playlist (sans doublon).
         #[qinvokable]
         fn add(self: Pin<&mut Playlist>, urls: &QStringList);
+
+        /// Ajoute en fin de playlist les fichiers audio et vidéo d'un dossier.
+        #[qinvokable]
+        fn add_folder(self: Pin<&mut Playlist>, url: &QString);
 
         /// Retire un fichier de la playlist (le fichier sur le disque n'est pas touché).
         #[qinvokable]
@@ -79,6 +98,8 @@ pub struct PlaylistRust {
     current: i32,
     next_index: i32,
     previous_index: i32,
+    repeat_mode: i32,
+    shuffle: bool,
 }
 
 impl qobject::Playlist {
@@ -95,9 +116,36 @@ impl qobject::Playlist {
         self.as_mut().sync();
     }
 
+    pub fn open_folder(mut self: Pin<&mut Self>, url: &QString) -> QString {
+        let dir = local_path(&url.to_string());
+        let keys = folder_files(Path::new(&dir)).iter().map(|p| p.to_string_lossy().into_owned()).collect();
+        let first = self.as_mut().rust_mut().model.replace(keys);
+        self.as_mut().sync();
+        QString::from(&first.map(|k| item_url(&k)).unwrap_or_default())
+    }
+
+    pub fn cycle_repeat(mut self: Pin<&mut Self>) {
+        let repeat = self.rust().model.repeat.next();
+        self.as_mut().rust_mut().model.repeat = repeat;
+        self.as_mut().sync();
+    }
+
+    pub fn toggle_shuffle(mut self: Pin<&mut Self>) {
+        let on = !self.rust().model.shuffle();
+        self.as_mut().rust_mut().model.set_shuffle(on);
+        self.as_mut().sync();
+    }
+
     pub fn add(mut self: Pin<&mut Self>, urls: &QStringList) {
         let keys: Vec<String> =
             QList::<QString>::from(urls).iter().map(|u| local_path(&u.to_string())).collect();
+        self.as_mut().rust_mut().model.add(keys);
+        self.as_mut().sync();
+    }
+
+    pub fn add_folder(mut self: Pin<&mut Self>, url: &QString) {
+        let dir = local_path(&url.to_string());
+        let keys = folder_files(Path::new(&dir)).iter().map(|p| p.to_string_lossy().into_owned()).collect();
         self.as_mut().rust_mut().model.add(keys);
         self.as_mut().sync();
     }
@@ -131,11 +179,20 @@ impl qobject::Playlist {
         let index = |i: Option<usize>| i.map_or(-1, |i| i as i32);
         let (current, next, previous) =
             (index(model.current_index()), index(model.next_index()), index(model.previous_index()));
+        let (repeat, shuffle) = (model.repeat as i32, model.shuffle());
 
         self.as_mut().set_items(QStringList::from(&items));
         self.as_mut().set_current(current);
         self.as_mut().set_next_index(next);
         self.as_mut().set_previous_index(previous);
+        if self.rust().repeat_mode != repeat {
+            self.as_mut().rust_mut().repeat_mode = repeat;
+            self.as_mut().repeat_mode_changed();
+        }
+        if self.rust().shuffle != shuffle {
+            self.as_mut().rust_mut().shuffle = shuffle;
+            self.as_mut().shuffle_changed();
+        }
         self.as_mut().refresh_durations();
         self.as_mut().probe_missing();
     }
@@ -187,16 +244,41 @@ fn item_url(key: &str) -> String {
     if key.starts_with('/') { file_url(key) } else { key.to_string() }
 }
 
+/// Mode de répétition (valeurs exposées à QML).
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub enum Repeat {
+    #[default]
+    Off = 0,
+    /// Le fichier en cours, en boucle (géré par mpv : `loop-file`)
+    One = 1,
+    /// Toute la playlist : après le dernier fichier, retour au premier
+    All = 2,
+}
+
+impl Repeat {
+    pub fn next(self) -> Self {
+        match self {
+            Repeat::Off => Repeat::One,
+            Repeat::One => Repeat::All,
+            Repeat::All => Repeat::Off,
+        }
+    }
+}
+
 /// Contenu de la playlist et fichier en cours, indépendamment de Qt.
 #[derive(Default, Debug)]
 pub struct Items {
-    /// Chemins locaux (ou URL pour un flux réseau), dans l'ordre de lecture
+    /// Chemins locaux (ou URL pour un flux réseau), dans l'ordre d'affichage
     pub keys: Vec<String>,
     /// Fichier en cours, suivi par son chemin pour survivre aux déplacements
     current: Option<String>,
-    /// Ancienne position du fichier en cours s'il a été retiré :
-    /// la lecture continue alors avec le fichier qui a pris sa place
+    /// Ancienne position (dans l'ordre de lecture) du fichier en cours s'il a été
+    /// retiré : la lecture continue alors avec le fichier qui a pris sa place
     anchor: Option<usize>,
+    pub repeat: Repeat,
+    /// Ordre de lecture mélangé, quand la lecture aléatoire est active
+    shuffle_order: Option<Vec<String>>,
+    seed: u64,
 }
 
 impl Items {
@@ -207,16 +289,34 @@ impl Items {
             if !self.keys.iter().any(|k| k == key) {
                 self.keys.push(key.to_string());
             }
+            self.current = Some(key.to_string());
+            self.reshuffle();
         }
         self.current = Some(key.to_string());
         self.anchor = None;
     }
 
+    /// Remplace la playlist par `keys` (ouverture d'un dossier) et renvoie
+    /// le premier fichier à lire, selon l'ordre de lecture.
+    pub fn replace(&mut self, keys: Vec<String>) -> Option<String> {
+        self.keys = keys;
+        self.current = None;
+        self.anchor = None;
+        self.reshuffle();
+        self.order().first().cloned()
+    }
+
     pub fn add(&mut self, keys: Vec<String>) {
+        let mut added = Vec::new();
         for key in keys {
             if !self.keys.contains(&key) {
-                self.keys.push(key);
+                self.keys.push(key.clone());
+                added.push(key);
             }
+        }
+        if self.shuffle_order.is_some() {
+            self.shuffle_vec(&mut added);
+            self.shuffle_order.get_or_insert_with(Vec::new).extend(added);
         }
     }
 
@@ -224,11 +324,16 @@ impl Items {
         if index >= self.keys.len() {
             return;
         }
-        let key = self.keys.remove(index);
+        let key = self.keys[index].clone();
+        let Some(position) = self.order().iter().position(|k| *k == key) else { return };
+        self.keys.remove(index);
+        if let Some(order) = self.shuffle_order.as_mut() {
+            order.remove(position);
+        }
         if self.current.as_deref() == Some(key.as_str()) {
             self.current = None;
-            self.anchor = Some(index);
-        } else if let Some(anchor) = self.anchor.as_mut().filter(|a| **a > index) {
+            self.anchor = Some(position);
+        } else if let Some(anchor) = self.anchor.as_mut().filter(|a| **a > position) {
             *anchor -= 1;
         }
     }
@@ -237,14 +342,77 @@ impl Items {
         if from < self.keys.len() && to < self.keys.len() && from != to {
             let key = self.keys.remove(from);
             self.keys.insert(to, key);
-            self.anchor = None;
+            if self.shuffle_order.is_none() {
+                self.anchor = None;
+            }
         }
     }
 
     pub fn sort(&mut self) {
         let name = |k: &String| k.rsplit('/').next().unwrap_or(k).to_string();
         self.keys.sort_by(|a, b| natural_cmp(&name(a), &name(b)));
+        if self.shuffle_order.is_none() {
+            self.anchor = None;
+        }
+    }
+
+    pub fn shuffle(&self) -> bool {
+        self.shuffle_order.is_some()
+    }
+
+    /// Active ou coupe la lecture aléatoire. À l'activation, le fichier en cours
+    /// reste le premier de l'ordre mélangé : tous les autres passeront ensuite.
+    pub fn set_shuffle(&mut self, on: bool) {
         self.anchor = None;
+        if on {
+            self.shuffle_order = Some(Vec::new());
+            self.reshuffle();
+        } else {
+            self.shuffle_order = None;
+        }
+    }
+
+    fn reshuffle(&mut self) {
+        if self.shuffle_order.is_none() {
+            return;
+        }
+        let current = self.current.clone().filter(|c| self.keys.contains(c));
+        let mut rest: Vec<String> =
+            self.keys.iter().filter(|k| Some(*k) != current.as_ref()).cloned().collect();
+        self.shuffle_vec(&mut rest);
+        self.shuffle_order = Some(current.into_iter().chain(rest).collect());
+    }
+
+    /// Mélange de Fisher-Yates (xorshift : pas besoin d'un hasard cryptographique).
+    fn shuffle_vec(&mut self, items: &mut [String]) {
+        for i in (1..items.len()).rev() {
+            let j = (self.next_random() % (i as u64 + 1)) as usize;
+            items.swap(i, j);
+        }
+    }
+
+    fn next_random(&mut self) -> u64 {
+        if self.seed == 0 {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(1, |d| d.as_nanos() as u64);
+            self.seed = nanos | 1;
+        }
+        self.seed ^= self.seed << 13;
+        self.seed ^= self.seed >> 7;
+        self.seed ^= self.seed << 17;
+        self.seed
+    }
+
+    #[cfg(test)]
+    fn with_seed(mut self, seed: u64) -> Self {
+        self.seed = seed;
+        self
+    }
+
+    /// Ordre de lecture : mélangé en aléatoire, sinon celui de la liste.
+    fn order(&self) -> &[String] {
+        self.shuffle_order.as_deref().unwrap_or(&self.keys)
     }
 
     pub fn current_index(&self) -> Option<usize> {
@@ -252,19 +420,32 @@ impl Items {
         self.keys.iter().position(|k| k == current)
     }
 
-    pub fn next_index(&self) -> Option<usize> {
-        let len = self.keys.len();
-        match self.current_index() {
-            Some(c) => (c + 1 < len).then_some(c + 1),
-            None => self.anchor.filter(|&a| a < len),
+    /// Index (dans la liste) du fichier suivant ou précédent dans l'ordre de lecture.
+    fn step(&self, forward: bool) -> Option<usize> {
+        let order = self.order();
+        let len = order.len();
+        if len == 0 {
+            return None;
         }
+        let wrap = self.repeat == Repeat::All;
+        let position = self.current.as_ref().and_then(|c| order.iter().position(|k| k == c));
+        let target = match (position, self.anchor) {
+            (Some(p), _) if forward => (p + 1 < len).then_some(p + 1).or(wrap.then_some(0)),
+            (Some(p), _) => p.checked_sub(1).or(wrap.then_some(len - 1)),
+            // Fichier en cours retiré : continuer avec celui qui a pris sa place
+            (None, Some(a)) if forward => (a < len).then_some(a).or(wrap.then_some(0)),
+            (None, Some(a)) => a.checked_sub(1).filter(|&p| p < len).or(wrap.then_some(len - 1)),
+            (None, None) => None,
+        }?;
+        self.keys.iter().position(|k| *k == order[target])
+    }
+
+    pub fn next_index(&self) -> Option<usize> {
+        self.step(true)
     }
 
     pub fn previous_index(&self) -> Option<usize> {
-        match self.current_index() {
-            Some(c) => c.checked_sub(1),
-            None => self.anchor.and_then(|a| a.checked_sub(1)).filter(|&p| p < self.keys.len()),
-        }
+        self.step(false)
     }
 }
 
@@ -392,6 +573,21 @@ pub fn build(path: &Path) -> Vec<PathBuf> {
     if !files.iter().any(|p| p == path) {
         files.push(path.to_path_buf());
     }
+    files.sort_by(|a, b| {
+        let name = |p: &PathBuf| p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        natural_cmp(&name(a), &name(b))
+    });
+    files
+}
+
+/// Fichiers audio et vidéo d'un dossier (sans les sous-dossiers), dans l'ordre naturel.
+pub fn folder_files(dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
+    let mut files: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.is_file() && media_kind(p).is_some())
+        .collect();
     files.sort_by(|a, b| {
         let name = |p: &PathBuf| p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         natural_cmp(&name(a), &name(b))
@@ -529,6 +725,103 @@ mod tests {
         let mut stream = Items::default();
         stream.open("https://exemple.org/v.mp4", Vec::new);
         assert_eq!(stream.keys, ["https://exemple.org/v.mp4"]);
+    }
+
+    /// Fichiers visités en appuyant sur « suivant » depuis le fichier en cours
+    fn play_through(list: &mut Items) -> Vec<String> {
+        let mut visited = vec![list.keys[list.current_index().unwrap()].clone()];
+        while let Some(next) = list.next_index() {
+            let key = list.keys[next].clone();
+            if visited.contains(&key) {
+                break;
+            }
+            list.open(&key, || unreachable!());
+            visited.push(key);
+        }
+        visited
+    }
+
+    #[test]
+    fn repeats_playlist() {
+        let mut list = items(&["a", "b", "c"], "c");
+        assert_eq!(list.next_index(), None);
+        list.repeat = Repeat::All;
+        assert_eq!(list.next_index(), Some(0)); // retour au début
+        list.open("a", || unreachable!());
+        assert_eq!(list.previous_index(), Some(2)); // et à la fin dans l'autre sens
+
+        assert_eq!(Repeat::Off.next(), Repeat::One);
+        assert_eq!(Repeat::One.next(), Repeat::All);
+        assert_eq!(Repeat::All.next(), Repeat::Off);
+    }
+
+    #[test]
+    fn shuffles_every_file_once() {
+        let names: Vec<String> = (1..=20).map(|i| format!("ép {i}")).collect();
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        let mut list = items(&refs, "ép 5").with_seed(42);
+        list.set_shuffle(true);
+
+        let visited = play_through(&mut list);
+        assert_eq!(visited[0], "ép 5"); // le fichier en cours reste le premier
+        let mut sorted = visited.clone();
+        sorted.sort_by(|a, b| natural_cmp(a, b));
+        assert_eq!(sorted, names); // chaque fichier exactement une fois
+        assert_ne!(visited, names[4..].iter().chain(&names[..4]).cloned().collect::<Vec<_>>());
+
+        // Fin de l'ordre mélangé : arrêt, ou retour au début en répétition
+        assert_eq!(list.next_index(), None);
+        list.repeat = Repeat::All;
+        assert_eq!(list.next_index().map(|i| list.keys[i].as_str()), Some("ép 5"));
+
+        // Couper l'aléatoire revient à l'ordre de la liste
+        list.set_shuffle(false);
+        let current = list.current_index().unwrap();
+        assert_eq!(list.next_index(), Some((current + 1) % names.len()));
+    }
+
+    #[test]
+    fn shuffle_survives_edits() {
+        let mut list = items(&["a", "b", "c", "d"], "a").with_seed(7);
+        list.set_shuffle(true);
+        let next = list.next_index().unwrap();
+        let next_key = list.keys[next].clone();
+
+        // Retirer le fichier en cours : la lecture continue avec le suivant prévu
+        list.remove(list.current_index().unwrap());
+        assert_eq!(list.next_index().map(|i| list.keys[i].clone()), Some(next_key.clone()));
+
+        // Trier la liste ne change pas l'ordre de lecture
+        list.sort();
+        assert_eq!(list.next_index().map(|i| list.keys[i].clone()), Some(next_key));
+
+        // Un fichier ajouté est joué lui aussi
+        list.add(vec!["e".into()]);
+        list.open(&list.keys[list.next_index().unwrap()].clone(), || unreachable!());
+        let rest = play_through(&mut list);
+        assert_eq!(rest.len(), 4); // b, c, d, e dans un ordre quelconque
+        assert!(rest.contains(&"e".to_string()));
+    }
+
+    #[test]
+    fn opens_folders() {
+        let dir = std::env::temp_dir().join(format!("lumen-folder-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("sous-dossier")).unwrap();
+        for name in ["clip 10.mp4", "clip 2.mkv", "musique.flac", "notes.txt", "film.srt"] {
+            std::fs::write(dir.join(name), b"").unwrap();
+        }
+        let names: Vec<String> = folder_files(&dir)
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["clip 2.mkv", "clip 10.mp4", "musique.flac"]);
+        std::fs::remove_dir_all(&dir).unwrap();
+
+        let mut list = Items::default();
+        assert_eq!(list.replace(vec!["x".into(), "y".into()]), Some("x".into()));
+        assert_eq!(list.current_index(), None);
+        assert_eq!(list.replace(Vec::new()), None);
     }
 
     #[test]
