@@ -11,6 +11,10 @@ pub mod ffi {
         type QString = cxx_qt_lib::QString;
 
         include!("app.h");
+        include!("thumbnail.h");
+
+        /// Enregistre le fournisseur d'images des miniatures (avant de charger le QML).
+        fn lumen_register_thumbnails(engine: Pin<&mut QQmlApplicationEngine>);
 
         /// Vrai si l'interface QML a bien été créée.
         fn lumen_qml_loaded(engine: &QQmlApplicationEngine) -> bool;

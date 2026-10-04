@@ -50,6 +50,11 @@ pub mod qobject {
         #[cxx_name = "localPath"]
         fn local_path(self: &Utils, url: &QString) -> QString;
 
+        /// Adresse de la miniature de `url` à `seconds` (vide pour un flux réseau)
+        #[qinvokable]
+        #[cxx_name = "thumbnailUrl"]
+        fn thumbnail_url(self: &Utils, url: &QString, seconds: f64) -> QString;
+
         /// Vrai si l'URL désigne un dossier local
         #[qinvokable]
         #[cxx_name = "isFolder"]
@@ -117,6 +122,10 @@ impl qobject::Utils {
 
     pub fn local_path(&self, url: &QString) -> QString {
         QString::from(&local_path(&url.to_string()))
+    }
+
+    pub fn thumbnail_url(&self, url: &QString, seconds: f64) -> QString {
+        QString::from(&thumbnail_url(&url.to_string(), seconds))
     }
 
     pub fn is_folder(&self, url: &QString) -> bool {
@@ -242,6 +251,17 @@ pub fn local_path(url: &str) -> String {
         Some(path) => percent_decode(path),
         None => url.to_string(),
     }
+}
+
+/// « image://thumbnail/<secondes>/<chemin UTF-8 en hexadécimal> » (voir cpp/thumbnail.cpp).
+/// L'hexadécimal évite tout souci d'encodage d'URL avec les accents, espaces, # ou %.
+pub fn thumbnail_url(url: &str, seconds: f64) -> String {
+    let path = local_path(url);
+    if !path.starts_with('/') || !seconds.is_finite() {
+        return String::new();
+    }
+    let hex: String = path.bytes().map(|b| format!("{b:02x}")).collect();
+    format!("image://thumbnail/{:.1}/{hex}", seconds.max(0.0))
 }
 
 const SUBTITLE_EXTENSIONS: &[&str] = &["srt", "ass", "ssa", "vtt", "sub", "sup", "idx", "smi"];
@@ -390,6 +410,13 @@ mod tests {
         assert_eq!(local_path("file:///films/Mon%20Film.mkv"), "/films/Mon Film.mkv");
         assert_eq!(local_path("file:///films/Mon Film.mkv"), "/films/Mon Film.mkv");
         assert_eq!(local_path("https://exemple.org/v.mp4"), "https://exemple.org/v.mp4");
+    }
+
+    #[test]
+    fn builds_thumbnail_urls() {
+        assert_eq!(thumbnail_url("file:///a/%C3%A9%20%23.mkv", 12.34), "image://thumbnail/12.3/2f612fc3a920232e6d6b76");
+        assert_eq!(thumbnail_url("file:///a/b.mkv", -5.0), "image://thumbnail/0.0/2f612f622e6d6b76");
+        assert_eq!(thumbnail_url("https://exemple.org/v.mp4", 10.0), "");
     }
 
     #[test]

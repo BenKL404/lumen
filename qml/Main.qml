@@ -721,22 +721,23 @@ Window {
             }
         }
 
-        // OSD
-        Rectangle {
+        // OSD : texte seul sur l'image, sans fond ; un fin contour sombre le garde
+        // lisible sur les scènes claires
+        Item {
             id: osdBox
             anchors { top: parent.top; right: parent.right; margins: 20 }
-            width: osdText.implicitWidth + 32
-            height: 40
-            radius: 12
-            color: theme.surface
+            width: osdText.implicitWidth
+            height: osdText.implicitHeight
             opacity: 0
             Behavior on opacity { NumberAnimation { duration: theme.animation } }
 
             Text {
                 id: osdText
-                anchors.centerIn: parent
                 color: theme.text
-                font.pixelSize: 14
+                font.pixelSize: 20
+                font.weight: Font.DemiBold
+                style: Text.Outline
+                styleColor: Qt.rgba(0, 0, 0, 0.75)
             }
             Timer {
                 id: osdTimer
@@ -860,6 +861,7 @@ Window {
         bookmarks: root.bookmarks
         onAbLoopClearRequested: root.clearAbLoop()
         imagePanelOpen: imagePanel.visible
+        mediaUrl: root.currentUrl
         onImageSettingsRequested: root.toggleImagePanel()
     }
 

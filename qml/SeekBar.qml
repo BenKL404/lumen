@@ -19,6 +19,8 @@ Item {
     property var bookmarks: []
     property real loopA: -1
     property real loopB: -1
+    // Aperçu au survol : fonction (secondes) -> adresse d'image, ou null
+    property var previewSource: null
 
     signal moved(real value)
 
@@ -116,8 +118,54 @@ Item {
         Behavior on scale { NumberAnimation { duration: 120 } }
     }
 
+    // ------------------------------------------------- Aperçu au survol
+    readonly property real hoverSeconds: valueAt(area.mouseX)
+    property string previewRequested: ""
+    // Dernière miniature prête : reste affichée pendant le calcul de la suivante
+    property string previewShown: ""
+
+    onHoverSecondsChanged: if (area.containsMouse && previewSource) previewTimer.restart()
+
+    // Petit délai : pas de calcul pour chaque pixel parcouru par la souris
+    Timer {
+        id: previewTimer
+        interval: 40
+        onTriggered: slider.previewRequested = slider.previewSource ? slider.previewSource(slider.hoverSeconds) : ""
+    }
+
+    Image {
+        visible: false
+        asynchronous: true
+        source: slider.previewRequested
+        sourceSize.width: 320
+        onStatusChanged: if (status === Image.Ready) slider.previewShown = source
+    }
+
+    Rectangle {
+        id: previewBox
+        visible: slider.previewSource !== null && area.containsMouse && slider.previewShown !== ""
+                 && previewImage.status === Image.Ready && previewImage.implicitWidth > 0
+        width: 184
+        height: previewImage.implicitWidth > 0 ? (width - 4) * previewImage.implicitHeight / previewImage.implicitWidth + 4 : 0
+        x: Math.max(0, Math.min(slider.width - width, area.mouseX - width / 2))
+        y: tooltip.y - height - 6
+        radius: 8
+        color: "#000000"
+        border.color: slider.theme.border
+
+        Image {
+            id: previewImage
+            anchors { fill: parent; margins: 2 }
+            source: slider.previewShown
+            sourceSize.width: 320
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+        }
+    }
+
     // Info-bulle temporelle au survol
     Rectangle {
+        id: tooltip
         visible: slider.tooltipFormatter !== null && area.containsMouse && slider.to > 0
         y: -height - 10
         x: Math.max(0, Math.min(slider.width - width, area.mouseX - width / 2))
