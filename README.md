@@ -158,7 +158,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 - Décodage matériel automatique (`hwdec=auto-safe`), sans copie sous X11 et Wayland
 - Ouverture par dialogue ou par glisser-déposer
 - Barre de contrôle qui se masque automatiquement pendant la lecture
-- Clic = pause, double-clic = plein écran, molette = volume
+- Double-clic = lecture / pause, triple-clic = plein écran, molette = volume
 - Info-bulle temporelle au survol de la barre de progression
 - Affichage OSD des actions (volume, vitesse, saut…)
 
@@ -186,6 +186,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | Ctrl+PgUp / PgDn  | Chapitre précédent / suivant  |
 | L                 | Boucle A-B (A, B, désactiver) |
 | B                 | Ajouter un signet             |
+| I                 | Réglages d'image              |
 | R / H             | Répétition / aléatoire        |
 | Ctrl+O            | Ouvrir un dossier             |
 

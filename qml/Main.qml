@@ -89,6 +89,7 @@ Window {
     Component.onCompleted: {
         video.volume = settings.volume
         video.muted = settings.muted
+        imageKeys.forEach(k => image[k] = settings[k])
         playlist.setRepeat(settings.repeatMode)
         playlist.setShuffleEnabled(settings.shuffle)
         if (settings.maximized)
@@ -103,6 +104,7 @@ Window {
         settings.repeatMode = playlist.repeatMode
         settings.shuffle = playlist.shuffle
         settings.playlistOpen = playlistPanel.open
+        imageKeys.forEach(k => settings[k] = image[k])
         settings.maximized = fullscreen ? wasMaximized : visibility === Window.Maximized
         // La taille n'est connue qu'en fenêtré ; sans la largeur de la playlist accolée
         if (visibility === Window.Windowed) {
@@ -189,7 +191,7 @@ Window {
                     action: () => root.setSpeed(v)
                 }))
             },
-            { label: "Audio", icon: "music", enabled: has, submenu:
+            { label: "Audio", icon: "audio-lines", enabled: has, submenu:
                 (audioTracks.length > 0 ? audioTracks.map(t => trackEntry(t, "aid"))
                                         : [{ label: "Aucune piste audio", enabled: false }]).concat([
                 { separator: true },
@@ -209,6 +211,7 @@ Window {
             { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
                 { label: "Plein écran", icon: "maximize", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
                 { label: "Capture d'écran", icon: "camera", shortcut: "S", action: () => root.screenshot() },
+                { label: "Réglages d'image…", icon: "settings", shortcut: "I", action: () => root.toggleImagePanel() },
                 { separator: true },
                 aspectEntry("Format automatique", "-1"),
                 aspectEntry("16:9", "16:9"),
@@ -223,6 +226,35 @@ Window {
             { separator: true },
             { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
         ]
+    }
+
+    // --------------------------------------------------- Réglages d'image
+    // Appliqués à mpv dès qu'ils changent ; réglages globaux, conservés d'un fichier
+    // à l'autre et d'une session à l'autre (settings.toml)
+    readonly property QtObject image: QtObject {
+        property int brightness: 0
+        property int contrast: 0
+        property int saturation: 0
+        property int gamma: 0
+        property int hue: 0
+        property int zoom: 100
+
+        onBrightnessChanged: video.command(["set", "brightness", String(brightness)])
+        onContrastChanged: video.command(["set", "contrast", String(contrast)])
+        onSaturationChanged: video.command(["set", "saturation", String(saturation)])
+        onGammaChanged: video.command(["set", "gamma", String(gamma)])
+        onHueChanged: video.command(["set", "hue", String(hue)])
+        // mpv attend un zoom logarithmique : 0 = taille normale, 1 = ×2
+        onZoomChanged: video.command(["set", "video-zoom", String(Math.log2(zoom / 100))])
+    }
+
+    readonly property var imageKeys: ["brightness", "contrast", "saturation", "gamma", "hue", "zoom"]
+
+    function toggleImagePanel() {
+        trackMenu.visible = false
+        appMenu.close()
+        contextMenu.close()
+        imagePanel.visible = !imagePanel.visible
     }
 
     // ------------------------------------------- Chapitres, signets, boucle A-B
@@ -400,6 +432,7 @@ Window {
 
     function closePopups() {
         trackMenu.visible = false
+        imagePanel.visible = false
         appMenu.close()
         contextMenu.close()
         if (fullscreen)
@@ -478,6 +511,7 @@ Window {
 
     function toggleTrackMenu(kind) {
         appMenu.visible = false
+        imagePanel.visible = false
         if (trackMenu.visible && trackMenu.kind === kind) {
             trackMenu.visible = false
         } else {
@@ -539,7 +573,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !trackMenu.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
+                    && !trackMenu.visible && !imagePanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -633,25 +667,35 @@ Window {
             cursorShape: root.controlsVisible ? Qt.ArrowCursor : Qt.BlankCursor
 
             onPositionChanged: root.wake()
+            // Clic droit : menu. Clic gauche : compté (voir clickTimer)
+            onPressed: (mouse) => {
+                if (mouse.button === Qt.LeftButton) {
+                    clickTimer.clicks += 1
+                    clickTimer.restart()
+                }
+            }
             onClicked: (mouse) => {
                 if (mouse.button === Qt.RightButton)
                     root.openContextMenu(stageArea, mouse.x, mouse.y)
-                else
-                    clickTimer.restart()
-            }
-            onDoubleClicked: (mouse) => {
-                if (mouse.button !== Qt.LeftButton)
-                    return
-                clickTimer.stop()
-                root.toggleFullScreen()
             }
             onWheel: (wheel) => root.changeVolume(wheel.angleDelta.y > 0 ? 5 : -5)
 
-            // Distingue clic simple (pause) et double-clic (plein écran)
+            // Double-clic : lecture / pause ; triple-clic : plein écran ; simple clic : rien
+            // (pas de pause par accident). On attend la fin de la série de clics pour savoir
+            // si un double-clic va devenir un triple-clic.
             Timer {
                 id: clickTimer
-                interval: 220
-                onTriggered: if (video.hasMedia) video.togglePause()
+
+                property int clicks: 0
+
+                interval: 250
+                onTriggered: {
+                    if (clicks >= 3)
+                        root.toggleFullScreen()
+                    else if (clicks === 2 && video.hasMedia)
+                        video.togglePause()
+                    clicks = 0
+                }
             }
         }
 
@@ -815,16 +859,15 @@ Window {
         onShuffleRequested: root.toggleShuffle()
         bookmarks: root.bookmarks
         onAbLoopClearRequested: root.clearAbLoop()
-        onSettingsRequested: (anchor) => {
-            trackMenu.visible = false
-            appMenu.popup(anchor, true)
-        }
+        imagePanelOpen: imagePanel.visible
+        onImageSettingsRequested: root.toggleImagePanel()
     }
 
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible || appMenu.visible || contextMenu.visible || (root.fullscreen && playlistPanel.open)
+        enabled: trackMenu.visible || imagePanel.visible || appMenu.visible || contextMenu.visible
+                 || (root.fullscreen && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
     }
@@ -871,6 +914,15 @@ Window {
             trackMenu.visible = false
             subtitleDialog.open()
         }
+    }
+
+    ImagePanel {
+        id: imagePanel
+        anchors { right: controls.right; bottom: controls.top; bottomMargin: 10; rightMargin: controls.floating ? 0 : 10 }
+        visible: false
+        theme: root.theme
+        image: root.image
+        onCloseRequested: visible = false
     }
 
     AppMenu {
@@ -973,7 +1025,7 @@ Window {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (trackMenu.visible || appMenu.visible || contextMenu.visible) {
+            if (trackMenu.visible || imagePanel.visible || appMenu.visible || contextMenu.visible) {
                 root.closePopups()
             } else if (playlistPanel.open) {
                 root.setPlaylistOpen(false)
@@ -986,6 +1038,7 @@ Window {
     Shortcut { sequence: "Ctrl+O"; onActivated: folderDialog.open() }
     Shortcut { sequence: "R"; onActivated: root.cycleRepeat() }
     Shortcut { sequence: "L"; onActivated: root.cycleAbLoop() }
+    Shortcut { sequence: "I"; onActivated: root.toggleImagePanel() }
     Shortcut { sequence: "B"; onActivated: root.addBookmark() }
     Shortcut { sequence: "Ctrl+PgUp"; onActivated: root.stepChapter(-1) }
     Shortcut { sequence: "Ctrl+PgDown"; onActivated: root.stepChapter(1) }

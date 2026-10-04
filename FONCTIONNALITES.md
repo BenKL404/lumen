@@ -85,7 +85,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Glisser-déposer d'une vidéo directement dans la fenêtre.
 
 ### Contrôles
-- Clic sur la vidéo pour mettre en pause, double-clic pour le plein écran.
+- Double-clic sur la vidéo pour lecture / pause, triple-clic pour le plein écran (un simple clic ne fait rien, pour éviter les pauses par accident).
 - Molette de la souris pour régler le volume.
 - Barre de progression cliquable, avec l'heure affichée au survol.
 - Boutons pour reculer ou avancer de 10 secondes.
@@ -121,6 +121,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | Ctrl + Page préc. / suiv. | Chapitre précédent / suivant |
 | L | Boucle A-B : début, fin, désactivation |
 | B | Ajouter un signet |
+| I | Réglages d'image (luminosité, contraste, saturation, gamma, teinte, zoom) |
 | R / H | Répétition / lecture aléatoire |
 | Ctrl + O | Ouvrir un dossier |
 

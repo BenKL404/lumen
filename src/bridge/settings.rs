@@ -17,6 +17,13 @@ pub mod qobject {
         #[qproperty(bool, playlist_open)]
         #[qproperty(bool, resume_playback)]
         #[qproperty(bool, auto_playlist)]
+        // Réglages d'image : -100…100, zoom en % (25…400)
+        #[qproperty(i32, brightness)]
+        #[qproperty(i32, contrast)]
+        #[qproperty(i32, saturation)]
+        #[qproperty(i32, gamma)]
+        #[qproperty(i32, hue)]
+        #[qproperty(i32, zoom)]
         type Settings = super::SettingsRust;
 
         /// Enregistre les paramètres sur le disque.
@@ -47,6 +54,14 @@ pub struct SettingsFile {
     pub resume_playback: bool,
     /// Ajouter à la playlist les fichiers du même nom (épisodes, parties…)
     pub auto_playlist: bool,
+    /// Réglages d'image, de -100 à 100 (0 : neutre)
+    pub brightness: i32,
+    pub contrast: i32,
+    pub saturation: i32,
+    pub gamma: i32,
+    pub hue: i32,
+    /// Zoom de l'image en % (100 : taille normale)
+    pub zoom: i32,
 }
 
 impl Default for SettingsFile {
@@ -62,6 +77,12 @@ impl Default for SettingsFile {
             playlist_open: false,
             resume_playback: true,
             auto_playlist: true,
+            brightness: 0,
+            contrast: 0,
+            saturation: 0,
+            gamma: 0,
+            hue: 0,
+            zoom: 100,
         }
     }
 }
@@ -77,6 +98,10 @@ impl SettingsFile {
         // Mêmes minimums que la fenêtre (Main.qml), et pas de taille absurde
         self.window_width = self.window_width.clamp(640, 16384);
         self.window_height = self.window_height.clamp(400, 16384);
+        for value in [&mut self.brightness, &mut self.contrast, &mut self.saturation, &mut self.gamma, &mut self.hue] {
+            *value = (*value).clamp(-100, 100);
+        }
+        self.zoom = self.zoom.clamp(25, 400);
         self
     }
 
@@ -126,6 +151,12 @@ pub struct SettingsRust {
     playlist_open: bool,
     resume_playback: bool,
     auto_playlist: bool,
+    brightness: i32,
+    contrast: i32,
+    saturation: i32,
+    gamma: i32,
+    hue: i32,
+    zoom: i32,
 }
 
 impl From<SettingsFile> for SettingsRust {
@@ -141,6 +172,12 @@ impl From<SettingsFile> for SettingsRust {
             playlist_open: f.playlist_open,
             resume_playback: f.resume_playback,
             auto_playlist: f.auto_playlist,
+            brightness: f.brightness,
+            contrast: f.contrast,
+            saturation: f.saturation,
+            gamma: f.gamma,
+            hue: f.hue,
+            zoom: f.zoom,
         }
     }
 }
@@ -158,6 +195,12 @@ impl From<&SettingsRust> for SettingsFile {
             playlist_open: s.playlist_open,
             resume_playback: s.resume_playback,
             auto_playlist: s.auto_playlist,
+            brightness: s.brightness,
+            contrast: s.contrast,
+            saturation: s.saturation,
+            gamma: s.gamma,
+            hue: s.hue,
+            zoom: s.zoom,
         }
     }
 }
@@ -201,6 +244,12 @@ mod tests {
             playlist_open: true,
             resume_playback: false,
             auto_playlist: false,
+            brightness: 10,
+            contrast: -5,
+            saturation: 20,
+            gamma: 0,
+            hue: -3,
+            zoom: 150,
         };
         settings.store(&path).unwrap(); // crée aussi le dossier
         assert_eq!(SettingsFile::load(&path), settings);
@@ -214,12 +263,17 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
 
         // Clés absentes : valeurs par défaut ; valeurs absurdes : corrigées
-        std::fs::write(&path, "volume = 400.0\nrepeat_mode = 7\nwindow_width = 10\nshuffle = true\n").unwrap();
+        std::fs::write(
+            &path,
+            "volume = 400.0\nrepeat_mode = 7\nwindow_width = 10\nshuffle = true\nbrightness = 250\nzoom = 5\n",
+        )
+        .unwrap();
         let loaded = SettingsFile::load(&path);
         assert_eq!(loaded.volume, 130.0);
         assert_eq!(loaded.repeat_mode, 0);
         assert_eq!(loaded.window_width, 640);
         assert!(loaded.shuffle);
+        assert_eq!((loaded.brightness, loaded.zoom), (100, 25));
         assert!(loaded.resume_playback && loaded.auto_playlist);
 
         // Fichier illisible : paramètres par défaut, sans planter
