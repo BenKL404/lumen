@@ -30,6 +30,12 @@ class MpvItem : public QQuickFramebufferObject
     Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
     // Infos techniques, indexées par nom de propriété mpv (video-format, width, audio-bitrate…)
     Q_PROPERTY(QVariantMap info READ info NOTIFY infoChanged)
+    // Chapitres (propriété mpv « chapter-list ») : [{ title, time }] ; chapter : index en cours (-1 : aucun)
+    Q_PROPERTY(QVariantList chapters READ chapters NOTIFY chaptersChanged)
+    Q_PROPERTY(int chapter READ chapter NOTIFY chapterChanged)
+    // Bornes de la boucle A-B en secondes, -1 si non définies
+    Q_PROPERTY(double abLoopA READ abLoopA NOTIFY abLoopChanged)
+    Q_PROPERTY(double abLoopB READ abLoopB NOTIFY abLoopChanged)
 
 public:
     explicit MpvItem(QQuickItem *parent = nullptr);
@@ -49,6 +55,10 @@ public:
     bool eofReached() const { return m_eofReached; }
     bool muted() const { return m_muted; }
     QVariantMap info() const { return m_info; }
+    QVariantList chapters() const { return m_chapters; }
+    int chapter() const { return m_chapter; }
+    double abLoopA() const { return m_abLoopA; }
+    double abLoopB() const { return m_abLoopB; }
 
     void setPaused(bool paused);
     void setVolume(double volume);
@@ -80,6 +90,9 @@ signals:
     void eofReachedChanged();
     void mutedChanged();
     void infoChanged();
+    void chaptersChanged();
+    void chapterChanged();
+    void abLoopChanged();
     void fileLoaded();
     void endOfFile();
 
@@ -108,6 +121,10 @@ private:
     bool m_eofReached = false;
     bool m_muted = false;
     QVariantMap m_info;
+    QVariantList m_chapters;
+    int m_chapter = -1;
+    double m_abLoopA = -1.0;
+    double m_abLoopB = -1.0;
     bool m_renderReady = false;
     QUrl m_pendingLoad;
 };

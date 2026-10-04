@@ -6,6 +6,8 @@ pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qlist.h");
+        type QList_f64 = cxx_qt_lib::QList<f64>;
     }
 
     #[auto_cxx_name]
@@ -44,9 +46,25 @@ pub mod qobject {
         #[qinvokable]
         fn forget(self: &History, url: &QString);
 
-        /// Efface tout l'historique de lecture.
+        /// Efface tout l'historique de lecture (les signets sont conservés).
         #[qinvokable]
         fn clear(self: &History);
+
+        /// Signets de la vidéo, en secondes, dans l'ordre chronologique.
+        #[qinvokable]
+        fn bookmarks(self: &History, url: &QString) -> QList_f64;
+
+        /// Ajoute un signet (ignoré s'il en existe déjà un à moins d'une seconde).
+        #[qinvokable]
+        fn add_bookmark(self: &History, url: &QString, position: f64);
+
+        /// Retire le signet le plus proche de `position` (à une seconde près).
+        #[qinvokable]
+        fn remove_bookmark(self: &History, url: &QString, position: f64);
+
+        /// Retire tous les signets de la vidéo.
+        #[qinvokable]
+        fn clear_bookmarks(self: &History, url: &QString);
     }
 }
 
@@ -54,7 +72,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::QString;
+use cxx_qt_lib::{QList, QString};
 use rusqlite::{params, Connection, OptionalExtension};
 
 use super::utils::local_path;
@@ -149,6 +167,38 @@ impl qobject::History {
         if let Some(store) = &self.rust().store {
             if let Err(e) = store.clear() {
                 eprintln!("Lumen : échec de l'effacement de l'historique ({e})");
+            }
+        }
+    }
+
+    pub fn bookmarks(&self, url: &QString) -> QList<f64> {
+        let mut list = QList::<f64>::default();
+        if let Some(store) = &self.rust().store {
+            for position in store.bookmarks(&local_path(&url.to_string())).unwrap_or_default() {
+                list.append(position);
+            }
+        }
+        list
+    }
+
+    pub fn add_bookmark(&self, url: &QString, position: f64) {
+        self.with_store("ajout du signet", |store| store.add_bookmark(&local_path(&url.to_string()), position));
+    }
+
+    pub fn remove_bookmark(&self, url: &QString, position: f64) {
+        self.with_store("suppression du signet", |store| {
+            store.remove_bookmark(&local_path(&url.to_string()), position)
+        });
+    }
+
+    pub fn clear_bookmarks(&self, url: &QString) {
+        self.with_store("suppression des signets", |store| store.clear_bookmarks(&local_path(&url.to_string())));
+    }
+
+    fn with_store(&self, what: &str, f: impl FnOnce(&HistoryStore) -> rusqlite::Result<()>) {
+        if let Some(store) = &self.rust().store {
+            if let Err(e) = f(store) {
+                eprintln!("Lumen : échec de {what} ({e})");
             }
         }
     }
@@ -251,6 +301,18 @@ impl HistoryStore {
                  COMMIT;",
             )?;
         }
+        if version < 2 {
+            conn.execute_batch(
+                "BEGIN;
+                 CREATE TABLE IF NOT EXISTS bookmarks (
+                    key      TEXT NOT NULL,
+                    position REAL NOT NULL,
+                    PRIMARY KEY (key, position)
+                 );
+                 PRAGMA user_version = 2;
+                 COMMIT;",
+            )?;
+        }
         Ok(Self { conn })
     }
 
@@ -304,6 +366,40 @@ impl HistoryStore {
         Ok(())
     }
 
+    pub fn bookmarks(&self, key: &str) -> rusqlite::Result<Vec<f64>> {
+        let mut stmt = self.conn.prepare("SELECT position FROM bookmarks WHERE key = ?1 ORDER BY position")?;
+        let rows = stmt.query_map(params![key], |row| row.get(0))?;
+        rows.collect()
+    }
+
+    pub fn add_bookmark(&self, key: &str, position: f64) -> rusqlite::Result<()> {
+        if !position.is_finite() || position < 0.0 {
+            return Ok(());
+        }
+        let near: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM bookmarks WHERE key = ?1 AND ABS(position - ?2) < 1.0",
+            params![key, position],
+            |row| row.get(0),
+        )?;
+        if near == 0 {
+            self.conn.execute("INSERT INTO bookmarks (key, position) VALUES (?1, ?2)", params![key, position])?;
+        }
+        Ok(())
+    }
+
+    pub fn remove_bookmark(&self, key: &str, position: f64) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "DELETE FROM bookmarks WHERE key = ?1 AND ABS(position - ?2) < 1.0",
+            params![key, position],
+        )?;
+        Ok(())
+    }
+
+    pub fn clear_bookmarks(&self, key: &str) -> rusqlite::Result<()> {
+        self.conn.execute("DELETE FROM bookmarks WHERE key = ?1", params![key])?;
+        Ok(())
+    }
+
     pub fn clear(&self) -> rusqlite::Result<()> {
         self.conn.execute("DELETE FROM positions", [])?;
         Ok(())
@@ -348,6 +444,27 @@ mod tests {
         store.save("b", &Entry { position: 240.0, ..Entry::default() }).unwrap();
         store.clear().unwrap();
         assert_eq!((store.get("a").unwrap(), store.get("b").unwrap()), (None, None));
+    }
+
+    #[test]
+    fn stores_bookmarks() {
+        let store = HistoryStore::open_in_memory().unwrap();
+        store.add_bookmark("a", 300.0).unwrap();
+        store.add_bookmark("a", 60.5).unwrap();
+        store.add_bookmark("a", 60.9).unwrap(); // trop proche du précédent : ignoré
+        store.add_bookmark("a", f64::NAN).unwrap();
+        store.add_bookmark("b", 10.0).unwrap();
+        assert_eq!(store.bookmarks("a").unwrap(), [60.5, 300.0]);
+
+        store.remove_bookmark("a", 300.4).unwrap(); // à une seconde près
+        assert_eq!(store.bookmarks("a").unwrap(), [60.5]);
+
+        // Effacer l'historique de lecture conserve les signets
+        store.clear().unwrap();
+        assert_eq!(store.bookmarks("a").unwrap(), [60.5]);
+        store.clear_bookmarks("a").unwrap();
+        assert!(store.bookmarks("a").unwrap().is_empty());
+        assert_eq!(store.bookmarks("b").unwrap(), [10.0]);
     }
 
     #[test]

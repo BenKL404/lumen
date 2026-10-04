@@ -183,6 +183,11 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | Z / X             | Décalage sous-titres ∓0,1 s   |
 | PgUp / PgDn       | Fichier précédent / suivant   |
 | F6                | Afficher / masquer la playlist |
+| Ctrl+PgUp / PgDn  | Chapitre précédent / suivant  |
+| L                 | Boucle A-B (A, B, désactiver) |
+| B                 | Ajouter un signet             |
+| R / H             | Répétition / aléatoire        |
+| Ctrl+O            | Ouvrir un dossier             |
 
 ---
 

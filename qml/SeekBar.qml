@@ -11,6 +11,12 @@ Item {
     // false : n'émet qu'au relâchement (position, évite de saturer mpv)
     property bool live: false
     property var tooltipFormatter: null
+    // Repères (barre de progression) : chapitres [{ title, time }], signets [secondes],
+    // boucle A-B (bornes en secondes, -1 si non définies)
+    property var chapters: []
+    property var bookmarks: []
+    property real loopA: -1
+    property real loopB: -1
 
     signal moved(real value)
 
@@ -22,6 +28,20 @@ Item {
 
     function valueAt(x) {
         return Math.max(0, Math.min(1, x / width)) * to
+    }
+
+    function xAt(seconds) {
+        return to > 0 ? width * Math.max(0, Math.min(1, seconds / to)) : 0
+    }
+
+    // Titre du chapitre qui contient `seconds`
+    function chapterAt(seconds) {
+        let title = ""
+        for (const c of chapters) {
+            if (c.time <= seconds)
+                title = c.title || ""
+        }
+        return title
     }
 
     Rectangle {
@@ -38,6 +58,47 @@ Item {
             height: parent.height
             radius: parent.radius
             color: slider.theme.accent
+        }
+
+        // Boucle A-B : zone entre A et B (ou simple trait tant que B n'est pas défini)
+        Rectangle {
+            visible: slider.loopA >= 0
+            x: slider.xAt(slider.loopA)
+            width: slider.loopB > slider.loopA ? slider.xAt(slider.loopB) - x : 2
+            y: -2
+            height: parent.height + 4
+            radius: 2
+            color: Qt.rgba(slider.theme.accent.r, slider.theme.accent.g, slider.theme.accent.b, 0.35)
+            border.color: slider.theme.accent
+            border.width: 1
+        }
+
+        // Chapitres : fines coupures dans la barre
+        Repeater {
+            model: slider.chapters
+            delegate: Rectangle {
+                required property var modelData
+                visible: modelData.time > 0
+                x: slider.xAt(modelData.time) - 1
+                width: 2
+                height: parent.height
+                color: slider.theme.chrome
+            }
+        }
+    }
+
+    // Signets : petits losanges au-dessus de la barre
+    Repeater {
+        model: slider.bookmarks
+        delegate: Rectangle {
+            required property real modelData
+            x: slider.xAt(modelData) - width / 2
+            y: track.y - 9
+            width: 7
+            height: 7
+            rotation: 45
+            radius: 1
+            color: slider.theme.text
         }
     }
 
@@ -65,7 +126,13 @@ Item {
         Text {
             id: tip
             anchors.centerIn: parent
-            text: slider.tooltipFormatter ? slider.tooltipFormatter(slider.valueAt(area.mouseX)) : ""
+            text: {
+                if (!slider.tooltipFormatter)
+                    return ""
+                const seconds = slider.valueAt(area.mouseX)
+                const chapter = slider.chapterAt(seconds)
+                return slider.tooltipFormatter(seconds) + (chapter !== "" ? "  ·  " + chapter : "")
+            }
             color: slider.theme.text
             font.pixelSize: 12
         }
