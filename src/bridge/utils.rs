@@ -74,6 +74,17 @@ pub mod qobject {
         #[cxx_name = "equalizerPreset"]
         fn equalizer_preset(self: &Utils, name: &QString) -> QList_i32;
 
+        /// Prépare les shaders d'image (shaders.rs) et renvoie la valeur de `glsl-shaders` pour
+        /// mpv (chemins séparés par « : », vide si aucun)
+        #[qinvokable]
+        #[cxx_name = "videoShaders"]
+        fn video_shaders(self: &Utils, sharpness: i32, upscaler: i32) -> QString;
+
+        /// Options de mise à l'échelle de mpv pour un mode d'agrandissement : nom, valeur, nom, valeur…
+        #[qinvokable]
+        #[cxx_name = "scalingOptions"]
+        fn scaling_options(self: &Utils, upscaler: i32) -> QStringList;
+
         /// yt-dlp à utiliser pour les vidéos en ligne (vide : celui du PATH)
         #[qinvokable]
         #[cxx_name = "ytdlPath"]
@@ -184,6 +195,28 @@ impl qobject::Utils {
             }
         }
         list
+    }
+
+    pub fn video_shaders(&self, sharpness: i32, upscaler: i32) -> QString {
+        use super::shaders::{cache_dir, write_shaders, Upscaler};
+        match write_shaders(&cache_dir(), sharpness, Upscaler::from_index(upscaler)) {
+            Ok(paths) => QString::from(
+                &paths.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>().join(":"),
+            ),
+            Err(e) => {
+                eprintln!("Lumen : filtres d'image indisponibles ({e})");
+                QString::default()
+            }
+        }
+    }
+
+    pub fn scaling_options(&self, upscaler: i32) -> QStringList {
+        let mut list = QList::<QString>::default();
+        for (name, value) in super::shaders::scaling_options(super::shaders::Upscaler::from_index(upscaler)) {
+            list.append(QString::from(name));
+            list.append(QString::from(value));
+        }
+        QStringList::from(&list)
     }
 
     pub fn ytdl_path(&self) -> QString {

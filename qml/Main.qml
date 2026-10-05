@@ -251,6 +251,8 @@ Window {
         property int gamma: 0
         property int hue: 0
         property int zoom: 100
+        // Netteté (shader AMD CAS, sur la carte graphique) : 0 = désactivée
+        property int sharpness: 0
 
         onBrightnessChanged: video.command(["set", "brightness", String(brightness)])
         onContrastChanged: video.command(["set", "contrast", String(contrast)])
@@ -259,9 +261,19 @@ Window {
         onHueChanged: video.command(["set", "hue", String(hue)])
         // mpv attend un zoom logarithmique : 0 = taille normale, 1 = ×2
         onZoomChanged: video.command(["set", "video-zoom", String(Math.log2(zoom / 100))])
+        // Regroupé : un curseur qu'on fait glisser ne recharge les shaders qu'une fois par image
+        onSharpnessChanged: Qt.callLater(root.applyShaders)
     }
 
-    readonly property var imageKeys: ["brightness", "contrast", "saturation", "gamma", "hue", "zoom"]
+    readonly property var imageKeys: ["brightness", "contrast", "saturation", "gamma", "hue", "zoom", "sharpness"]
+
+    // Filtres d'image (shaders.rs) : netteté et agrandissement
+    function applyShaders() {
+        const options = utils.scalingOptions(settings.upscaler)
+        for (let i = 0; i + 1 < options.length; i += 2)
+            video.command(["set", options[i], options[i + 1]])
+        video.command(["set", "glsl-shaders", utils.videoShaders(image.sharpness, settings.upscaler)])
+    }
 
     // --------------------------------------------------------------- Son
     // Égaliseur et normalisation : chaîne de filtres `af` (audio.rs), mémorisés ;
@@ -1308,6 +1320,7 @@ Window {
         video.command(["set", "alang", settings.audioLanguages])
         video.command(["set", "slang", settings.subtitleLanguages])
         video.command(["set", "sub-scale", String(settings.subtitleScale / 100)])
+        applyShaders()
     }
 
     Connections {
@@ -1316,6 +1329,7 @@ Window {
         function onAudioLanguagesChanged() { root.applyPlaybackSettings() }
         function onSubtitleLanguagesChanged() { root.applyPlaybackSettings() }
         function onSubtitleScaleChanged() { root.applyPlaybackSettings() }
+        function onUpscalerChanged() { root.applyShaders() }
     }
 
     function toggleShortcutsPanel() {
