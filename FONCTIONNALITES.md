@@ -122,6 +122,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | L | Boucle A-B : début, fin, désactivation |
 | B | Ajouter un signet |
 | I | Réglages d'image (luminosité, contraste, saturation, gamma, teinte, zoom) |
+| F1 | Liste des raccourcis (modifiables dans settings.toml) |
 | R / H | Répétition / lecture aléatoire |
 | Ctrl + O | Ouvrir un dossier |
 

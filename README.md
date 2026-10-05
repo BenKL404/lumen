@@ -95,8 +95,9 @@ applications avant. `pkill -x pop-launcher` (relancé automatiquement) ou une re
 
 ## Raccourcis personnalisables
 
-Les touches se règlent dans la section `[raccourcis]` de `~/.config/lumen/settings.toml`
-(Lumen fermé). La liste complète des actions y est écrite à la première fermeture de Lumen.
+**F1** (ou menu Lumen › Raccourcis clavier…) affiche toutes les actions et leurs touches.
+Son bouton **Modifier…** ouvre `~/.config/lumen/settings.toml` (section `[raccourcis]`) dans
+l'éditeur de texte, et **Recharger** applique les changements sans relancer Lumen.
 
 ```toml
 [raccourcis]
@@ -225,6 +226,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | L                 | Boucle A-B (A, B, désactiver) |
 | B                 | Ajouter un signet             |
 | I                 | Réglages d'image              |
+| F1                | Liste des raccourcis          |
 | R / H             | Répétition / aléatoire        |
 | Ctrl+O            | Ouvrir un dossier             |
 

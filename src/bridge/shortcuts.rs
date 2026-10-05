@@ -8,42 +8,44 @@ use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
-/// Actions et touches par défaut, dans l'ordre de priorité en cas de conflit.
+/// Actions (identifiant, nom affiché) et touches par défaut, dans l'ordre de priorité
+/// en cas de conflit et d'affichage dans la fenêtre des raccourcis.
 /// Échap n'est pas personnalisable : il ferme menus, playlist et plein écran.
-pub const DEFAULTS: &[(&str, &[&str])] = &[
-    ("lecture_pause", &["Space"]),
-    ("reculer", &["Left"]),
-    ("avancer", &["Right"]),
-    ("reculer_30s", &["Ctrl+Left"]),
-    ("avancer_30s", &["Ctrl+Right"]),
-    ("volume_plus", &["Up"]),
-    ("volume_moins", &["Down"]),
-    ("muet", &["M"]),
-    ("plein_ecran", &["F", "Return"]),
-    ("ouvrir", &["O"]),
-    ("ouvrir_dossier", &["Ctrl+O"]),
-    ("quitter", &["Ctrl+Q"]),
-    ("capture", &["S"]),
-    ("image_suivante", &["."]),
-    ("image_precedente", &[","]),
-    ("vitesse_plus", &["]"]),
-    ("vitesse_moins", &["["]),
-    ("vitesse_normale", &["Backspace"]),
-    ("sous_titres_suivants", &["J"]),
-    ("piste_audio_suivante", &["A"]),
-    ("decalage_sous_titres_moins", &["Z"]),
-    ("decalage_sous_titres_plus", &["X"]),
-    ("fichier_suivant", &["PgDown"]),
-    ("fichier_precedent", &["PgUp"]),
-    ("chapitre_suivant", &["Ctrl+PgDown"]),
-    ("chapitre_precedent", &["Ctrl+PgUp"]),
-    ("playlist", &["F6"]),
-    ("repetition", &["R"]),
-    ("aleatoire", &["H"]),
-    ("boucle_ab", &["L"]),
-    ("signet", &["B"]),
-    ("reglages_image", &["I"]),
-    ("retirer_de_la_playlist", &["Delete"]),
+pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
+    ("lecture_pause", "Lecture / pause", &["Space"]),
+    ("reculer", "Reculer de 5 s", &["Left"]),
+    ("avancer", "Avancer de 5 s", &["Right"]),
+    ("reculer_30s", "Reculer de 30 s", &["Ctrl+Left"]),
+    ("avancer_30s", "Avancer de 30 s", &["Ctrl+Right"]),
+    ("volume_plus", "Augmenter le volume", &["Up"]),
+    ("volume_moins", "Baisser le volume", &["Down"]),
+    ("muet", "Muet", &["M"]),
+    ("plein_ecran", "Plein écran", &["F", "Return"]),
+    ("ouvrir", "Ouvrir un fichier", &["O"]),
+    ("ouvrir_dossier", "Ouvrir un dossier", &["Ctrl+O"]),
+    ("quitter", "Quitter", &["Ctrl+Q"]),
+    ("capture", "Capture d'écran", &["S"]),
+    ("image_suivante", "Image suivante", &["."]),
+    ("image_precedente", "Image précédente", &[","]),
+    ("vitesse_plus", "Accélérer", &["]"]),
+    ("vitesse_moins", "Ralentir", &["["]),
+    ("vitesse_normale", "Vitesse normale", &["Backspace"]),
+    ("sous_titres_suivants", "Sous-titres suivants", &["J"]),
+    ("piste_audio_suivante", "Piste audio suivante", &["A"]),
+    ("decalage_sous_titres_moins", "Sous-titres −0,1 s", &["Z"]),
+    ("decalage_sous_titres_plus", "Sous-titres +0,1 s", &["X"]),
+    ("fichier_suivant", "Fichier suivant", &["PgDown"]),
+    ("fichier_precedent", "Fichier précédent", &["PgUp"]),
+    ("chapitre_suivant", "Chapitre suivant", &["Ctrl+PgDown"]),
+    ("chapitre_precedent", "Chapitre précédent", &["Ctrl+PgUp"]),
+    ("playlist", "Afficher la playlist", &["F6"]),
+    ("repetition", "Répétition", &["R"]),
+    ("aleatoire", "Lecture aléatoire", &["H"]),
+    ("boucle_ab", "Boucle A-B", &["L"]),
+    ("signet", "Ajouter un signet", &["B"]),
+    ("reglages_image", "Réglages d'image", &["I"]),
+    ("retirer_de_la_playlist", "Retirer de la playlist", &["Delete"]),
+    ("raccourcis", "Raccourcis clavier", &["F1"]),
 ];
 
 /// Touches d'une action : une seule ("F6") ou une liste (["F", "Return"]) dans le fichier.
@@ -72,8 +74,13 @@ impl Keys {
     }
 }
 
+/// Nom affiché d'une action
+pub fn label(action: &str) -> &'static str {
+    DEFAULTS.iter().find(|(id, _, _)| *id == action).map_or("", |(_, label, _)| label)
+}
+
 pub fn defaults() -> BTreeMap<String, Keys> {
-    DEFAULTS.iter().map(|(action, keys)| (action.to_string(), Keys::from_list(keys))).collect()
+    DEFAULTS.iter().map(|(action, _, keys)| (action.to_string(), Keys::from_list(keys))).collect()
 }
 
 /// Raccourcis du fichier complétés par les valeurs par défaut. Les actions inconnues
@@ -99,13 +106,13 @@ fn normalized(key: &str) -> String {
 pub fn resolve(user: &BTreeMap<String, Keys>) -> Resolved {
     let mut warnings: Vec<String> = user
         .keys()
-        .filter(|action| !DEFAULTS.iter().any(|(known, _)| known == action))
+        .filter(|action| !DEFAULTS.iter().any(|(known, _, _)| known == action))
         .map(|action| format!("Raccourci inconnu ignoré : {action}"))
         .collect();
 
     let wanted: Vec<(&str, Vec<String>, bool)> = DEFAULTS
         .iter()
-        .map(|(action, default)| {
+        .map(|(action, _, default)| {
             let default: Vec<String> = default.iter().map(|k| k.to_string()).collect();
             match user.get(*action) {
                 Some(keys) => {
