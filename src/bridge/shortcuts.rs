@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 /// Échap n'est pas personnalisable : il ferme menus, playlist et plein écran.
 pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("lecture_pause", "Lecture / pause", &["Space"]),
-    ("reculer", "Reculer de 5 s", &["Left"]),
-    ("avancer", "Avancer de 5 s", &["Right"]),
-    ("reculer_30s", "Reculer de 30 s", &["Ctrl+Left"]),
-    ("avancer_30s", "Avancer de 30 s", &["Ctrl+Right"]),
+    ("reculer", "Reculer (saut court)", &["Left"]),
+    ("avancer", "Avancer (saut court)", &["Right"]),
+    ("reculer_30s", "Reculer (saut long)", &["Ctrl+Left"]),
+    ("avancer_30s", "Avancer (saut long)", &["Ctrl+Right"]),
     ("volume_plus", "Augmenter le volume", &["Up"]),
     ("volume_moins", "Baisser le volume", &["Down"]),
     ("muet", "Muet", &["M"]),
@@ -52,6 +52,7 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("reglages_image", "Réglages d'image", &["I"]),
     ("retirer_de_la_playlist", "Retirer de la playlist", &["Delete"]),
     ("raccourcis", "Raccourcis clavier", &["F1"]),
+    ("preferences", "Préférences", &["F5"]),
 ];
 
 /// Touches d'une action : une seule ("F6") ou une liste (["F", "Return"]) dans le fichier.

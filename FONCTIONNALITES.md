@@ -123,6 +123,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | B | Ajouter un signet |
 | I | Réglages d'image (luminosité, contraste, saturation, gamma, teinte, zoom) |
 | F1 | Liste des raccourcis (modifiables dans settings.toml) |
+| F5 | Préférences (comme PotPlayer) |
 | Ctrl + U | Ouvrir une vidéo en ligne (YouTube…) |
 | E | Son : égaliseur, normalisation, décalage audio |
 | N | Normaliser le volume (dialogues / explosions) |

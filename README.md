@@ -246,6 +246,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | B                 | Ajouter un signet             |
 | I                 | Réglages d'image              |
 | F1                | Liste des raccourcis          |
+| F5                | Préférences                   |
 | Ctrl+U            | Ouvrir une vidéo en ligne     |
 | E                 | Égaliseur et son              |
 | N                 | Normaliser le volume          |
