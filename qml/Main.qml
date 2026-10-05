@@ -58,6 +58,7 @@ Window {
     readonly property var menuEntries: [
         { label: "Ouvrir un fichier…", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
         { label: "Ouvrir un dossier…", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
+        { label: "Ouvrir une vidéo en ligne…", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
         { label: "Ajouter des sous-titres…", action: () => subtitleDialog.open() },
         { separator: true },
         { label: "Lecture / pause", shortcut: root.keyLabel("lecture_pause"), action: () => video.togglePause() },
@@ -93,6 +94,14 @@ Window {
         video.volume = settings.volume
         video.muted = settings.muted
         imageKeys.forEach(k => image[k] = settings[k])
+        // Vidéos en ligne : yt-dlp récent et moteur JavaScript (voir utils.rs), 1080p au plus
+        const ytdl = utils.ytdlPath()
+        if (ytdl !== "")
+            video.command(["set", "script-opts", "ytdl_hook-ytdl_path=" + ytdl])
+        const js = utils.jsRuntime()
+        if (js !== "")
+            video.command(["set", "ytdl-raw-options", "js-runtimes=" + js])
+        video.command(["set", "ytdl-format", "bestvideo[height<=?1080]+bestaudio/best"])
         playlist.setRepeat(settings.repeatMode)
         playlist.setShuffleEnabled(settings.shuffle)
         if (settings.maximized)
@@ -139,6 +148,7 @@ Window {
         return [
             { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
             { label: "Ouvrir un dossier…", icon: "folder", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
+            { label: "Ouvrir une vidéo en ligne…", icon: "monitor", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
             { label: "Ajouter à la playlist…", action: () => addDialog.open() },
             { separator: true },
             { label: "Lecture", icon: "play", enabled: has, submenu: [
@@ -434,6 +444,7 @@ Window {
     }
 
     function closePopups() {
+        urlPanel.visible = false
         shortcutsPanel.visible = false
         trackMenu.visible = false
         imagePanel.visible = false
@@ -469,7 +480,11 @@ Window {
         playlist.load(pendingUrl)
         resumeBox.hide()
         video.loadFile(url)
-        osd(utils.fileName(pendingUrl))
+        // Une vidéo en ligne met quelques secondes à démarrer (yt-dlp, mise en mémoire tampon)
+        if (utils.isOnline(pendingUrl))
+            osd("Chargement de la vidéo en ligne…", 30000)
+        else
+            osd(utils.fileName(pendingUrl))
     }
 
     // Arrêt : ferme le fichier et revient à l'écran d'accueil (la playlist est conservée)
@@ -649,7 +664,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !trackMenu.visible && !imagePanel.visible && !shortcutsPanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
+                    && !trackMenu.visible && !imagePanel.visible && !shortcutsPanel.visible && !urlPanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -661,7 +676,7 @@ Window {
         visible: !root.fullscreen
         window: root
         theme: root.theme
-        format: video.hasMedia ? utils.fileExtension(root.currentUrl) : ""
+        format: !video.hasMedia ? "" : utils.isOnline(root.currentUrl) ? "WEB" : utils.fileExtension(root.currentUrl)
         title: video.hasMedia ? video.mediaTitle : "Lumen"
         pinned: root.pinned
         onMenuRequested: (anchor) => appMenu.popup(anchor, false)
@@ -700,7 +715,21 @@ Window {
                     root.playAt(playlist.nextIndex)
                 }
             }
+            onLoadFailed: (reason) => {
+                // Messages de mpv les plus courants, en français
+                const reasons = {
+                    "loading failed": "échec du chargement",
+                    "unrecognized file format": "format non reconnu",
+                    "no audio or video data played": "ni image ni son",
+                    "nothing to play": "rien à lire"
+                }
+                root.osd((utils.isOnline(root.pendingUrl) ? "Impossible de lire cette vidéo en ligne"
+                                                          : "Impossible d'ouvrir ce fichier")
+                         + " (" + (reasons[reason] || reason) + ")", 6000)
+            }
             onFileLoaded: {
+                if (utils.isOnline(root.pendingUrl))
+                    Qt.callLater(() => root.osd(video.mediaTitle))
                 root.currentUrl = root.pendingUrl
                 saveTimer.restart()
                 root.refreshBookmarks()
@@ -875,6 +904,11 @@ Window {
         DropArea {
             anchors.fill: parent
             onDropped: (drop) => {
+                // Lien glissé depuis un navigateur sous forme de texte
+                if ((!drop.hasUrls || drop.urls.length === 0) && drop.hasText && utils.isOnline(drop.text.trim())) {
+                    root.openUrl(drop.text.trim())
+                    return
+                }
                 if (!drop.hasUrls || drop.urls.length === 0)
                     return
                 const url = drop.urls[0]
@@ -922,7 +956,8 @@ Window {
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || appMenu.visible || contextMenu.visible
+        enabled: trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || urlPanel.visible
+                 || appMenu.visible || contextMenu.visible
                  || (root.fullscreen && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
@@ -991,6 +1026,21 @@ Window {
         id: contextMenu
         theme: root.theme
     }
+
+    UrlPanel {
+        id: urlPanel
+        anchors.centerIn: parent
+        visible: false
+        theme: root.theme
+        onAccepted: (url) => {
+            visible = false
+            root.openUrl(url)
+        }
+        onCloseRequested: visible = false
+    }
+
+    // Lecture du presse-papiers (pas d'accès direct en QML)
+    TextInput { id: clipboardReader; visible: false }
 
     ShortcutsPanel {
         id: shortcutsPanel
@@ -1103,6 +1153,8 @@ Window {
         "plein_ecran": () => toggleFullScreen(),
         "ouvrir": () => fileDialog.open(),
         "ouvrir_dossier": () => folderDialog.open(),
+        "ouvrir_url": () => openUrlPanel(),
+        "coller_lien": () => pasteLink(),
         "quitter": () => close(),
         "capture": () => screenshot(),
         "image_suivante": () => video.frameStep(true),
@@ -1150,6 +1202,22 @@ Window {
         return key.split("+").map(part => names[part] || part).join("+")
     }
 
+    function openUrlPanel(initial) {
+        closePopups()
+        urlPanel.open(initial)
+    }
+
+    // Ctrl+V : un lien dans le presse-papiers s'ouvre directement, sinon la fenêtre « Ouvrir une URL »
+    function pasteLink() {
+        clipboardReader.text = ""
+        clipboardReader.paste()
+        const text = clipboardReader.text.trim()
+        if (utils.isOnline(text) || text.startsWith("file://") || text.startsWith("/"))
+            openUrl(text)
+        else
+            openUrlPanel(text)
+    }
+
     function toggleShortcutsPanel() {
         const show = !shortcutsPanel.visible
         closePopups()
@@ -1167,7 +1235,8 @@ Window {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || appMenu.visible || contextMenu.visible) {
+            if (trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || urlPanel.visible
+                    || appMenu.visible || contextMenu.visible) {
                 root.closePopups()
             } else if (playlistPanel.open) {
                 root.setPlaylistOpen(false)

@@ -201,9 +201,15 @@ void MpvItem::handleEvents()
             setHasMedia(true);
             emit fileLoaded();
             break;
-        case MPV_EVENT_END_FILE:
+        case MPV_EVENT_END_FILE: {
+            const auto *end = static_cast<mpv_event_end_file *>(event->data);
+            if (end && end->reason == MPV_END_FILE_REASON_ERROR) {
+                setHasMedia(false);
+                emit loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
+            }
             emit endOfFile();
             break;
+        }
         default:
             break;
         }

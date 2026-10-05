@@ -93,6 +93,25 @@ applications avant. `pkill -x pop-launcher` (relancé automatiquement) ou une re
 
 ---
 
+## Vidéos en ligne (YouTube…)
+
+**Ctrl+U** (ou menu › Ouvrir une vidéo en ligne…), **Ctrl+V** avec un lien copié, ou un lien
+glissé depuis le navigateur. Lumen passe par [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+(qualité limitée à 1080p pour une lecture fluide).
+
+La version de yt-dlp des dépôts Ubuntu est trop ancienne pour YouTube : installer la version
+officielle dans `~/.local/bin` (Lumen l'utilise en priorité) et la mettre à jour de temps en temps :
+
+```bash
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ~/.local/bin/yt-dlp
+chmod +x ~/.local/bin/yt-dlp
+yt-dlp -U   # mise à jour
+```
+
+YouTube demande aussi un moteur JavaScript : Lumen trouve `deno` ou `node` (y compris via nvm).
+
+---
+
 ## Raccourcis personnalisables
 
 **F1** (ou menu Lumen › Raccourcis clavier…) affiche toutes les actions et leurs touches.
@@ -227,6 +246,8 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 | B                 | Ajouter un signet             |
 | I                 | Réglages d'image              |
 | F1                | Liste des raccourcis          |
+| Ctrl+U            | Ouvrir une vidéo en ligne     |
+| Ctrl+V            | Coller un lien vidéo          |
 | R / H             | Répétition / aléatoire        |
 | Ctrl+O            | Ouvrir un dossier             |
 

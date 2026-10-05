@@ -55,6 +55,21 @@ pub mod qobject {
         #[cxx_name = "thumbnailUrl"]
         fn thumbnail_url(self: &Utils, url: &QString, seconds: f64) -> QString;
 
+        /// yt-dlp à utiliser pour les vidéos en ligne (vide : celui du PATH)
+        #[qinvokable]
+        #[cxx_name = "ytdlPath"]
+        fn ytdl_path(self: &Utils) -> QString;
+
+        /// Moteur JavaScript pour yt-dlp, au format « node:/chemin » (vide si aucun)
+        #[qinvokable]
+        #[cxx_name = "jsRuntime"]
+        fn js_runtime(self: &Utils) -> QString;
+
+        /// Vrai pour une adresse en ligne (http, https…) plutôt qu'un fichier local
+        #[qinvokable]
+        #[cxx_name = "isOnline"]
+        fn is_online(self: &Utils, url: &QString) -> bool;
+
         /// Vrai si l'URL désigne un dossier local
         #[qinvokable]
         #[cxx_name = "isFolder"]
@@ -126,6 +141,20 @@ impl qobject::Utils {
 
     pub fn thumbnail_url(&self, url: &QString, seconds: f64) -> QString {
         QString::from(&thumbnail_url(&url.to_string(), seconds))
+    }
+
+    pub fn ytdl_path(&self) -> QString {
+        let found = find_ytdl(&home(), &std::env::var("PATH").unwrap_or_default());
+        QString::from(&found.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())
+    }
+
+    pub fn js_runtime(&self) -> QString {
+        let found = find_js_runtime(&home(), &std::env::var("PATH").unwrap_or_default());
+        QString::from(&found.unwrap_or_default())
+    }
+
+    pub fn is_online(&self, url: &QString) -> bool {
+        is_online(&url.to_string())
     }
 
     pub fn is_folder(&self, url: &QString) -> bool {
@@ -262,6 +291,55 @@ pub fn thumbnail_url(url: &str, seconds: f64) -> String {
     }
     let hex: String = path.bytes().map(|b| format!("{b:02x}")).collect();
     format!("image://thumbnail/{:.1}/{hex}", seconds.max(0.0))
+}
+
+use std::path::{Path, PathBuf};
+
+fn home() -> PathBuf {
+    std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default()
+}
+
+fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    path.metadata().is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
+fn in_path(name: &str, path_env: &str) -> Option<PathBuf> {
+    path_env.split(':').filter(|d| !d.is_empty()).map(|d| Path::new(d).join(name)).find(|p| is_executable(p))
+}
+
+/// yt-dlp à utiliser : celui de ~/.local/bin d'abord (installé à la main, donc récent ;
+/// celui des dépôts est souvent trop vieux pour YouTube), sinon le premier du PATH.
+pub fn find_ytdl(home: &Path, path_env: &str) -> Option<PathBuf> {
+    let local = home.join(".local/bin/yt-dlp");
+    if is_executable(&local) {
+        return Some(local);
+    }
+    in_path("yt-dlp", path_env)
+}
+
+/// Moteur JavaScript dont yt-dlp a besoin pour YouTube : deno ou node dans le PATH, sinon
+/// le node le plus récent de nvm (absent du PATH des applications lancées depuis le bureau).
+pub fn find_js_runtime(home: &Path, path_env: &str) -> Option<String> {
+    for name in ["deno", "node"] {
+        if let Some(path) = in_path(name, path_env) {
+            return Some(format!("{name}:{}", path.display()));
+        }
+    }
+    let versions = std::fs::read_dir(home.join(".nvm/versions/node")).ok()?;
+    let mut nodes: Vec<PathBuf> = versions
+        .filter_map(Result::ok)
+        .map(|e| e.path().join("bin/node"))
+        .filter(|p| is_executable(p))
+        .collect();
+    // Version la plus récente : tri naturel (v24 après v9)
+    nodes.sort_by(|a, b| crate::bridge::playlist::natural_cmp(&a.to_string_lossy(), &b.to_string_lossy()));
+    nodes.pop().map(|p| format!("node:{}", p.display()))
+}
+
+pub fn is_online(url: &str) -> bool {
+    let lower = url.trim().to_ascii_lowercase();
+    ["http://", "https://", "rtmp://", "rtsp://", "ytdl://"].iter().any(|scheme| lower.starts_with(scheme))
 }
 
 const SUBTITLE_EXTENSIONS: &[&str] = &["srt", "ass", "ssa", "vtt", "sub", "sup", "idx", "smi"];
@@ -417,6 +495,46 @@ mod tests {
         assert_eq!(thumbnail_url("file:///a/%C3%A9%20%23.mkv", 12.34), "image://thumbnail/12.3/2f612fc3a920232e6d6b76");
         assert_eq!(thumbnail_url("file:///a/b.mkv", -5.0), "image://thumbnail/0.0/2f612f622e6d6b76");
         assert_eq!(thumbnail_url("https://exemple.org/v.mp4", 10.0), "");
+    }
+
+    #[test]
+    fn finds_online_tools() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("lumen-tools-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let executable = |path: &Path| {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"").unwrap();
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        };
+        let home = root.join("home");
+        let system = root.join("usr/bin");
+        let path_env = format!("/inexistant:{}", system.display());
+
+        // yt-dlp : seulement celui du système, puis celui de ~/.local/bin en priorité
+        executable(&system.join("yt-dlp"));
+        assert_eq!(find_ytdl(&home, &path_env), Some(system.join("yt-dlp")));
+        executable(&home.join(".local/bin/yt-dlp"));
+        assert_eq!(find_ytdl(&home, &path_env), Some(home.join(".local/bin/yt-dlp")));
+
+        // Moteur JavaScript : aucun, puis le node le plus récent de nvm, puis celui du PATH
+        assert_eq!(find_js_runtime(&home, &path_env), None);
+        executable(&home.join(".nvm/versions/node/v9.0.0/bin/node"));
+        executable(&home.join(".nvm/versions/node/v24.21.0/bin/node"));
+        let nvm = find_js_runtime(&home, &path_env).unwrap();
+        assert!(nvm.starts_with("node:") && nvm.ends_with("v24.21.0/bin/node"), "{nvm}");
+        executable(&system.join("node"));
+        assert_eq!(find_js_runtime(&home, &path_env), Some(format!("node:{}", system.join("node").display())));
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn detects_online_urls() {
+        assert!(is_online("https://www.youtube.com/watch?v=aqz-KE-bpKQ"));
+        assert!(is_online("  HTTP://exemple.org/v.mp4"));
+        assert!(!is_online("file:///films/a.mkv"));
+        assert!(!is_online("/films/a.mkv"));
     }
 
     #[test]

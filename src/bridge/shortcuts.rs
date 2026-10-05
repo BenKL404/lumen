@@ -23,6 +23,8 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("plein_ecran", "Plein écran", &["F", "Return"]),
     ("ouvrir", "Ouvrir un fichier", &["O"]),
     ("ouvrir_dossier", "Ouvrir un dossier", &["Ctrl+O"]),
+    ("ouvrir_url", "Ouvrir une vidéo en ligne", &["Ctrl+U"]),
+    ("coller_lien", "Coller un lien vidéo", &["Ctrl+V"]),
     ("quitter", "Quitter", &["Ctrl+Q"]),
     ("capture", "Capture d'écran", &["S"]),
     ("image_suivante", "Image suivante", &["."]),
