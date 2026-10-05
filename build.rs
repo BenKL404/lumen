@@ -22,6 +22,7 @@ fn main() {
                 "qml/Icon.qml",
                 "qml/ImagePanel.qml",
                 "qml/ShortcutsPanel.qml",
+                "qml/UrlPanel.qml",
             ],
             // Logo (écran d'accueil, barre de titre, icône de la fenêtre)
             qrc_files: &["assets/lumen.svg"],

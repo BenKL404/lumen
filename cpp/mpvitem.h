@@ -94,6 +94,8 @@ signals:
     void chapterChanged();
     void abLoopChanged();
     void fileLoaded();
+    // Le fichier ou le flux n'a pas pu être ouvert (message de mpv)
+    void loadFailed(const QString &reason);
     void endOfFile();
 
 private slots:
