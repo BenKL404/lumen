@@ -100,6 +100,11 @@ Window {
         sound.equalizer = Array.from(settings.equalizer)
         sound.normalize = settings.normalizeVolume
         applyPlaybackSettings()
+        // Extensions : l'exemple créé au premier lancement reste désactivé
+        const example = utils.prepareExtensionsFolder()
+        if (example !== "")
+            settings.disabledExtensions = Array.from(settings.disabledExtensions).concat([example])
+        utils.extensionPaths(settings.disabledExtensions).forEach(path => loadExtension(path))
         // Vidéos en ligne : yt-dlp récent et moteur JavaScript (voir utils.rs), 1080p au plus
         const ytdl = utils.ytdlPath()
         if (ytdl !== "")
@@ -777,6 +782,11 @@ Window {
                     root.playAt(playlist.nextIndex)
                 }
             }
+            // Une extension s'adresse à Lumen : « script-message lumen-osd <texte> »
+            onScriptMessage: (name, args) => {
+                if (name === "lumen-osd")
+                    root.osd(args.join(" "))
+            }
             onLoadFailed: (reason) => {
                 // Messages de mpv les plus courants, en français
                 const reasons = {
@@ -1364,6 +1374,17 @@ Window {
         closePopups()
         subtitleSearchPanel.open(subtitleSearch.suggestedQuery(currentUrl, video.mediaTitle),
                                  settings.subtitleLanguages || "fr,en")
+    }
+
+    // ------------------------------------------------------- Extensions
+    // Scripts mpv de ~/.config/lumen/scripts (extensions.rs), chargés une seule fois chacun
+    property var loadedExtensions: []
+
+    function loadExtension(path) {
+        if (loadedExtensions.indexOf(path) >= 0)
+            return
+        video.command(["load-script", path])
+        loadedExtensions = loadedExtensions.concat([path])
     }
 
     function togglePreferences() {

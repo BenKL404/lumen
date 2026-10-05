@@ -96,6 +96,8 @@ signals:
     void fileLoaded();
     // Le fichier ou le flux n'a pas pu être ouvert (message de mpv)
     void loadFailed(const QString &reason);
+    // Message d'une extension (script mpv) : « script-message <nom> <arguments…> »
+    void scriptMessage(const QString &name, const QStringList &arguments);
     void endOfFile();
 
 private slots:
