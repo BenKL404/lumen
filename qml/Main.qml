@@ -76,6 +76,7 @@ Window {
           action: () => root.toggleSetting("autoPlaylist", "Playlist automatique") },
         { label: "Une seule fenêtre Lumen", checked: settings.singleInstance,
           action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
+        { label: "Raccourcis clavier…", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
         { label: "Effacer l'historique de lecture", icon: "trash", action: () => { history.clear(); root.osd("Historique de lecture effacé") } },
         { separator: true },
         { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
@@ -433,6 +434,7 @@ Window {
     }
 
     function closePopups() {
+        shortcutsPanel.visible = false
         trackMenu.visible = false
         imagePanel.visible = false
         appMenu.close()
@@ -647,7 +649,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !trackMenu.visible && !imagePanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
+                    && !trackMenu.visible && !imagePanel.visible && !shortcutsPanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -920,7 +922,7 @@ Window {
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible || imagePanel.visible || appMenu.visible || contextMenu.visible
+        enabled: trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || appMenu.visible || contextMenu.visible
                  || (root.fullscreen && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
@@ -988,6 +990,27 @@ Window {
     AppMenu {
         id: contextMenu
         theme: root.theme
+    }
+
+    ShortcutsPanel {
+        id: shortcutsPanel
+        anchors.centerIn: parent
+        height: Math.min(620, parent.height - 60)
+        visible: false
+        theme: root.theme
+        settings: settings
+        formatKey: (key) => root.formatKey(key)
+        onCloseRequested: visible = false
+        onEditRequested: {
+            // Écrit le fichier (liste complète des actions) avant de l'ouvrir dans l'éditeur
+            root.saveSettings()
+            Qt.openUrlExternally(settings.fileUrl())
+        }
+        onReloadRequested: {
+            settings.reloadShortcuts()
+            root.osd(settings.shortcutWarnings() === "" ? "Raccourcis rechargés"
+                                                        : settings.shortcutWarnings().split("\n")[0], 4000)
+        }
     }
 
     // ---------------------------------------- Redimensionnement (sans bordure)
@@ -1101,14 +1124,16 @@ Window {
         "boucle_ab": () => cycleAbLoop(),
         "signet": () => addBookmark(),
         "reglages_image": () => toggleImagePanel(),
-        "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() }
+        "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() },
+        "raccourcis": () => toggleShortcutsPanel()
     })
 
     Instantiator {
         model: Object.keys(root.keyActions)
         delegate: Shortcut {
             required property string modelData
-            sequences: settings.keys(modelData)
+            // Relues après « Recharger » (shortcutsVersion change)
+            sequences: { settings.shortcutsVersion; return settings.keys(modelData) }
             onActivated: root.keyActions[modelData]()
         }
     }
@@ -1116,11 +1141,19 @@ Window {
     // Touche d'une action, en clair pour les menus (« Espace », « Ctrl+O »…)
     function keyLabel(action) {
         const key = settings.keys(action)[0]
-        if (key === undefined)
-            return ""
+        return key === undefined ? "" : formatKey(key)
+    }
+
+    function formatKey(key) {
         const names = { "Space": "Espace", "Return": "Entrée", "Backspace": "Retour arr.", "Delete": "Suppr",
                         "Left": "←", "Right": "→", "Up": "↑", "Down": "↓", "PgUp": "Pg préc.", "PgDown": "Pg suiv." }
         return key.split("+").map(part => names[part] || part).join("+")
+    }
+
+    function toggleShortcutsPanel() {
+        const show = !shortcutsPanel.visible
+        closePopups()
+        shortcutsPanel.visible = show
     }
 
     // Problèmes dans [raccourcis] : signalés au démarrage, après le nom du fichier ouvert
@@ -1134,7 +1167,7 @@ Window {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (trackMenu.visible || imagePanel.visible || appMenu.visible || contextMenu.visible) {
+            if (trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || appMenu.visible || contextMenu.visible) {
                 root.closePopups()
             } else if (playlistPanel.open) {
                 root.setPlaylistOpen(false)

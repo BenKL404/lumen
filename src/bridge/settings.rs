@@ -32,6 +32,8 @@ pub mod qobject {
         #[qproperty(i32, gamma)]
         #[qproperty(i32, hue)]
         #[qproperty(i32, zoom)]
+        // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
+        #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
 
         /// Enregistre les paramètres sur le disque.
@@ -45,10 +47,27 @@ pub mod qobject {
         /// Problèmes de la section [raccourcis] (conflits, actions inconnues), un par ligne.
         #[qinvokable]
         fn shortcut_warnings(self: &Settings) -> QString;
+
+        /// Identifiants des actions, dans l'ordre d'affichage.
+        #[qinvokable]
+        fn shortcut_actions(self: &Settings) -> QStringList;
+
+        /// Nom affiché d'une action (« Plein écran »…).
+        #[qinvokable]
+        fn action_label(self: &Settings, action: &QString) -> QString;
+
+        /// Relit la section [raccourcis] du fichier (modifiée à la main, Lumen ouvert).
+        #[qinvokable]
+        fn reload_shortcuts(self: Pin<&mut Settings>);
+
+        /// Adresse file:// de settings.toml, pour l'ouvrir dans un éditeur.
+        #[qinvokable]
+        fn file_url(self: &Settings) -> QString;
     }
 }
 
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 
 use std::collections::BTreeMap;
 
@@ -190,6 +209,7 @@ pub struct SettingsRust {
     zoom: i32,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
+    shortcuts_version: i32,
 }
 
 impl From<SettingsFile> for SettingsRust {
@@ -214,6 +234,7 @@ impl From<SettingsFile> for SettingsRust {
             zoom: f.zoom,
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
+            shortcuts_version: 0,
         }
     }
 }
@@ -262,8 +283,40 @@ impl qobject::Settings {
         QString::from(&self.rust().resolved_shortcuts.warnings.join("\n"))
     }
 
+    pub fn shortcut_actions(&self) -> QStringList {
+        let mut list = QList::<QString>::default();
+        for (action, _, _) in shortcuts::DEFAULTS {
+            list.append(QString::from(*action));
+        }
+        QStringList::from(&list)
+    }
+
+    pub fn action_label(&self, action: &QString) -> QString {
+        QString::from(shortcuts::label(&action.to_string()))
+    }
+
+    pub fn reload_shortcuts(mut self: Pin<&mut Self>) {
+        let map = SettingsFile::load(&settings_path()).shortcuts;
+        let resolved = shortcuts::resolve(&map);
+        let version = self.rust().shortcuts_version + 1;
+        let mut rust = self.as_mut().rust_mut();
+        rust.shortcuts = map;
+        rust.resolved_shortcuts = resolved;
+        rust.shortcuts_version = version;
+        self.as_mut().shortcuts_version_changed();
+    }
+
+    pub fn file_url(&self) -> QString {
+        QString::from(&super::playlist::file_url(&settings_path().to_string_lossy()))
+    }
+
     pub fn save(&self) {
-        let file = SettingsFile::from(self.rust()).sanitized();
+        let mut file = SettingsFile::from(self.rust()).sanitized();
+        // Les raccourcis ne se modifient que dans le fichier : garder ceux du fichier,
+        // pour ne pas écraser des changements faits pendant que Lumen est ouvert
+        if settings_path().exists() {
+            file.shortcuts = SettingsFile::load(&settings_path()).shortcuts;
+        }
         if let Err(e) = file.store(&settings_path()) {
             eprintln!("Lumen : impossible d'enregistrer les paramètres ({e})");
         }
