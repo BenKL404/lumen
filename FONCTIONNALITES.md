@@ -1,6 +1,6 @@
 # Lumen — Fonctionnalités
 
-Liste claire des fonctionnalités du lecteur vidéo Lumen : ce que fait déjà la v0.1, puis ce qui est prévu pour les versions suivantes.
+Liste claire des fonctionnalités du lecteur vidéo Lumen : le design, les fonctions de base, puis la feuille de route, entièrement réalisée en version 1.0.
 
 ---
 
@@ -73,7 +73,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 
 ---
 
-## ✅ Ce que fait déjà la v0.1
+## ✅ Fonctionnalités de base
 
 ### Lecture
 - Lit tous les formats vidéo et audio courants (MKV, MP4, AVI, WebM, MOV, MP3, FLAC…).
@@ -125,6 +125,8 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | F1 | Liste des raccourcis (modifiables dans settings.toml) |
 | F5 | Préférences (comme PotPlayer) |
 | Ctrl + J | Rechercher des sous-titres en ligne (OpenSubtitles) |
+| Tab | Informations sur le fichier (codec, résolution, débit, décodage…) |
+| Ctrl + M | Mode mini |
 | Ctrl + U | Ouvrir une vidéo en ligne (YouTube…) |
 | E | Son : égaliseur, normalisation, décalage audio |
 | N | Normaliser le volume (dialogues / explosions) |
@@ -135,9 +137,9 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 
 ---
 
-## 🔜 Ce qui est prévu ensuite
+## ✅ Feuille de route — réalisée (Lumen 1.0)
 
-### v0.2 — Pistes et mémoire
+### ✅ v0.2 — Pistes et mémoire
 - Menus pour choisir précisément la piste audio et les sous-titres.
 - Ajout de sous-titres externes (.srt, .ass) et réglage de leur décalage.
 - **Rappel de la position après fermeture** : Lumen mémorise l'endroit où tu t'es arrêté dans chaque vidéo, même si tu fermes le lecteur ou éteins l'ordinateur.
@@ -153,20 +155,20 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
   - Les variantes courantes sont reconnues : `S01E02`, `E02`, `Ep 2`, `Partie 2`, `CD2`…
   - L'option peut être désactivée dans les paramètres.
 
-### v0.3 — Le confort PotPlayer
+### ✅ v0.3 — Le confort PotPlayer
 - Miniatures de la vidéo au survol de la barre de progression.
 - Boucle A-B pour répéter un passage.
 - Signets et navigation par chapitres.
 - Réglages d'image : luminosité, contraste, saturation, rotation, zoom.
 - Menu clic droit complet.
 
-### v0.4 — Intégration à Linux
+### ✅ v0.4 — Intégration à Linux
 - Contrôle par les touches multimédia du clavier et depuis le bureau (GNOME, KDE).
 - L'écran ne se met plus en veille pendant un film.
 - « Ouvrir avec Lumen » et lecteur par défaut du système.
 - Raccourcis personnalisables et fichier de configuration.
 
-### v1.0 — La puissance
+### ✅ v1.0 — La puissance
 - Filtres pour améliorer l'image (netteté, agrandissement haute qualité).
 - Égaliseur audio.
 - Lecture de vidéos en ligne et YouTube.

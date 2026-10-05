@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fiche AppStream de Lumen : description pour les logithèques (Flathub, GNOME Logiciels, COSMIC…) -->
+<component type="desktop-application">
+  <id>io.github.benkl404.Lumen</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Lumen</name>
+  <summary>Fast, modern video player inspired by PotPlayer</summary>
+  <summary xml:lang="fr">Lecteur vidéo moderne et rapide, inspiré de PotPlayer</summary>
+
+  <developer id="io.github.benkl404">
+    <name>Kokou Bernard KPEDZI</name>
+  </developer>
+
+  <description>
+    <p>Lumen plays every common video and audio format with hardware decoding, in a clean interface that disappears while you watch.</p>
+    <p xml:lang="fr">Lumen lit tous les formats vidéo et audio courants avec le décodage matériel, dans une interface épurée qui s'efface pendant la lecture.</p>
+    <ul>
+      <li>Resume playback, automatic playlists of episodes, shuffle and repeat</li>
+      <li xml:lang="fr">Reprise de lecture, playlist automatique des épisodes, aléatoire et répétition</li>
+      <li>Audio and subtitle tracks, online subtitle search, chapters, bookmarks, A-B loop</li>
+      <li xml:lang="fr">Pistes audio et sous-titres, recherche de sous-titres en ligne, chapitres, signets, boucle A-B</li>
+      <li>Online videos (YouTube and more), seek bar thumbnails, image and sound settings</li>
+      <li xml:lang="fr">Vidéos en ligne (YouTube…), miniatures au survol, réglages d'image et de son</li>
+      <li>Themes and skins, customizable shortcuts, mpv script extensions</li>
+      <li xml:lang="fr">Thèmes et skins, raccourcis personnalisables, extensions (scripts mpv)</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.benkl404.Lumen.desktop</launchable>
+  <url type="homepage">https://github.com/BenKL404/lumen-player</url>
+  <url type="bugtracker">https://github.com/BenKL404/lumen-player/issues</url>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>video</keyword>
+    <keyword>player</keyword>
+    <keyword>movie</keyword>
+    <keyword xml:lang="fr">vidéo</keyword>
+    <keyword xml:lang="fr">lecteur</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-10-05">
+      <description>
+        <p>First complete release.</p>
+        <p xml:lang="fr">Première version complète.</p>
+      </description>
+    </release>
+  </releases>
+</component>

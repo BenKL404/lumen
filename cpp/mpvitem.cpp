@@ -405,6 +405,16 @@ void MpvItem::command(const QStringList &args)
     mpv_command_async(m_mpv, 0, argv.data());
 }
 
+QVariant MpvItem::getProperty(const QString &name) const
+{
+    mpv_node node;
+    if (mpv_get_property(m_mpv, name.toUtf8().constData(), MPV_FORMAT_NODE, &node) < 0)
+        return {};
+    const QVariant value = nodeToVariant(&node);
+    mpv_free_node_contents(&node);
+    return value;
+}
+
 void lumen_init_video()
 {
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);

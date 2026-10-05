@@ -46,6 +46,11 @@ pub mod qobject {
         #[qinvokable]
         fn forget(self: &History, url: &QString);
 
+        /// Dernière vidéo regardée et pas terminée, si elle existe encore (JSON
+        /// { url, position } ; vide sinon) : proposée au démarrage
+        #[qinvokable]
+        fn last_played(self: &History) -> QString;
+
         /// Efface tout l'historique de lecture (les signets sont conservés).
         #[qinvokable]
         fn clear(self: &History);
@@ -161,6 +166,19 @@ impl qobject::History {
         if let Err(e) = result {
             eprintln!("Lumen : échec de l'enregistrement de la position ({e})");
         }
+    }
+
+    pub fn last_played(&self) -> QString {
+        let Some(store) = &self.rust().store else { return QString::default() };
+        let found = store.recent(20).unwrap_or_default().into_iter().find(|(key, _)| {
+            // Fichier local encore présent, ou adresse en ligne
+            !key.starts_with('/') || std::path::Path::new(key).exists()
+        });
+        let json = found.map(|(key, position)| {
+            let url = if key.starts_with('/') { super::playlist::file_url(&key) } else { key };
+            serde_json::json!({ "url": url, "position": position }).to_string()
+        });
+        QString::from(&json.unwrap_or_default())
     }
 
     pub fn clear(&self) {
@@ -339,7 +357,7 @@ impl HistoryStore {
     pub fn save(&self, key: &str, entry: &Entry) -> rusqlite::Result<()> {
         self.conn.execute(
             "INSERT INTO positions (key, position, speed, audio_id, sub_id, sub_delay, sub_file, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, strftime('%s', 'now'))
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CAST(unixepoch('subsec') * 1000 AS INTEGER))
              ON CONFLICT(key) DO UPDATE SET
                 position = excluded.position,
                 speed = excluded.speed,
@@ -400,6 +418,15 @@ impl HistoryStore {
         Ok(())
     }
 
+    /// Dernières vidéos (chemin, position), de la plus récente à la plus ancienne
+    pub fn recent(&self, limit: usize) -> rusqlite::Result<Vec<(String, f64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT key, position FROM positions ORDER BY updated_at DESC, rowid DESC LIMIT ?1",
+        )?;
+        let rows = stmt.query_map(params![limit as i64], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect()
+    }
+
     pub fn clear(&self) -> rusqlite::Result<()> {
         self.conn.execute("DELETE FROM positions", [])?;
         Ok(())
@@ -444,6 +471,17 @@ mod tests {
         store.save("b", &Entry { position: 240.0, ..Entry::default() }).unwrap();
         store.clear().unwrap();
         assert_eq!((store.get("a").unwrap(), store.get("b").unwrap()), (None, None));
+    }
+
+    #[test]
+    fn lists_recent_entries() {
+        let store = HistoryStore::open_in_memory().unwrap();
+        store.save("/films/a.mkv", &Entry { position: 100.0, ..Entry::default() }).unwrap();
+        store.save("/films/b.mkv", &Entry { position: 200.0, ..Entry::default() }).unwrap();
+        assert_eq!(store.recent(5).unwrap()[0], ("/films/b.mkv".to_string(), 200.0));
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        store.save("/films/a.mkv", &Entry { position: 150.0, ..Entry::default() }).unwrap();
+        assert_eq!(store.recent(1).unwrap(), [("/films/a.mkv".to_string(), 150.0)]);
     }
 
     #[test]

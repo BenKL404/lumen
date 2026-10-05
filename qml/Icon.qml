@@ -84,7 +84,8 @@ Item {
         width: icon.size
         height: icon.size
         sourceSize: Qt.size(icon.size, icon.size)
-        source: icon.svg === "" ? "" : "data:image/svg+xml;base64," + Qt.btoa(icon.svg)
+        // Encodage d'URL plutôt que Qt.btoa (déprécié pour les chaînes dans les Qt récents)
+        source: icon.svg === "" ? "" : "data:image/svg+xml;charset=utf-8," + encodeURIComponent(icon.svg)
         opacity: icon.color.a
         smooth: true
         cache: true
