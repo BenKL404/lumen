@@ -17,7 +17,8 @@ Rectangle {
         { key: "saturation", label: "Saturation", min: -100, max: 100, neutral: 0 },
         { key: "gamma", label: "Gamma", min: -100, max: 100, neutral: 0 },
         { key: "hue", label: "Teinte", min: -100, max: 100, neutral: 0 },
-        { key: "zoom", label: "Zoom", min: 25, max: 400, neutral: 100, unit: " %" }
+        { key: "zoom", label: "Zoom", min: 25, max: 400, neutral: 100, unit: " %" },
+        { key: "sharpness", label: "Netteté", min: 0, max: 100, neutral: 0, unit: " %" }
     ]
 
     readonly property bool modified: rows.some(r => image[r.key] !== r.neutral)

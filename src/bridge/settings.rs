@@ -45,6 +45,9 @@ pub mod qobject {
         #[qproperty(QString, audio_languages)]
         #[qproperty(QString, subtitle_languages)]
         #[qproperty(i32, subtitle_scale)]
+        // Filtres d'image : netteté 0…100, agrandissement 0 standard / 1 haute qualité / 2 FSR
+        #[qproperty(i32, sharpness)]
+        #[qproperty(i32, upscaler)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -133,6 +136,10 @@ pub struct SettingsFile {
     pub subtitle_languages: String,
     /// Taille des sous-titres en % (100 : taille normale)
     pub subtitle_scale: i32,
+    /// Netteté (AMD CAS), de 0 (désactivée) à 100
+    pub sharpness: i32,
+    /// Agrandissement : 0 standard, 1 haute qualité, 2 AMD FSR (voir shaders.rs)
+    pub upscaler: i32,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -167,6 +174,8 @@ impl Default for SettingsFile {
             audio_languages: String::new(),
             subtitle_languages: String::new(),
             subtitle_scale: 100,
+            sharpness: 0,
+            upscaler: 0,
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -191,6 +200,10 @@ impl SettingsFile {
         self.seek_short = self.seek_short.clamp(1, 60);
         self.seek_long = self.seek_long.clamp(5, 600);
         self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
+        self.sharpness = self.sharpness.clamp(0, 100);
+        if !(0..=2).contains(&self.upscaler) {
+            self.upscaler = 0;
+        }
         self.audio_languages = language_list(&self.audio_languages);
         self.subtitle_languages = language_list(&self.subtitle_languages);
         // Liste complète dans le fichier : toutes les actions sont visibles et modifiables
@@ -269,6 +282,8 @@ pub struct SettingsRust {
     audio_languages: QString,
     subtitle_languages: QString,
     subtitle_scale: i32,
+    sharpness: i32,
+    upscaler: i32,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -309,6 +324,8 @@ impl From<SettingsFile> for SettingsRust {
             audio_languages: QString::from(&f.audio_languages),
             subtitle_languages: QString::from(&f.subtitle_languages),
             subtitle_scale: f.subtitle_scale,
+            sharpness: f.sharpness,
+            upscaler: f.upscaler,
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -345,6 +362,8 @@ impl From<&SettingsRust> for SettingsFile {
             audio_languages: s.audio_languages.to_string(),
             subtitle_languages: s.subtitle_languages.to_string(),
             subtitle_scale: s.subtitle_scale,
+            sharpness: s.sharpness,
+            upscaler: s.upscaler,
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -449,6 +468,8 @@ mod tests {
             audio_languages: "fr,en".into(),
             subtitle_languages: "fr".into(),
             subtitle_scale: 120,
+            sharpness: 40,
+            upscaler: 2,
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier

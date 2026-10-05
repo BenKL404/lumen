@@ -75,6 +75,11 @@ Rectangle {
 
             { cat: "video", label: "Décodage matériel", desc: "Moins de processeur et de batterie (VA-API, NVDEC…)",
               type: "toggle", get: () => s.hardwareDecoding, set: (v) => s.hardwareDecoding = v },
+            { cat: "video", label: "Agrandissement", desc: "Vidéos plus petites que l'écran (DVD, 720p…)", type: "choice",
+              options: [{ label: "Standard", value: 0 }, { label: "Haute qualité", value: 1 }, { label: "FSR (AMD)", value: 2 }],
+              get: () => s.upscaler, set: (v) => s.upscaler = v },
+            { cat: "video", label: "Netteté", desc: "Accentue les détails (AMD CAS, sur la carte graphique)", type: "slider",
+              min: 0, max: 100, neutral: 0, unit: " %", get: () => img.sharpness, set: (v) => img.sharpness = v },
             imageRow("brightness", "Luminosité", -100, 100, 0),
             imageRow("contrast", "Contraste", -100, 100, 0),
             imageRow("saturation", "Saturation", -100, 100, 0),
@@ -82,7 +87,7 @@ Rectangle {
             imageRow("hue", "Teinte", -100, 100, 0),
             imageRow("zoom", "Zoom", 25, 400, 100, " %"),
             { cat: "video", label: "Réglages d'image", desc: "Revenir aux valeurs neutres", type: "button", button: "Réinitialiser",
-              action: () => { ["brightness", "contrast", "saturation", "gamma", "hue"].forEach(k => img[k] = 0); img.zoom = 100 } },
+              action: () => { ["brightness", "contrast", "saturation", "gamma", "hue", "sharpness"].forEach(k => img[k] = 0); img.zoom = 100 } },
 
             { cat: "audio", label: "Normaliser le volume", desc: "Dialogues plus audibles, explosions moins fortes",
               type: "toggle", get: () => snd.normalize, set: (v) => snd.normalize = v },
