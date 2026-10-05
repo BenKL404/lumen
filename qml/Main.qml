@@ -74,23 +74,11 @@ Window {
         { label: "Plein écran", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
         { label: "Toujours au premier plan", checked: root.pinned, action: () => root.pinned = !root.pinned },
         { separator: true },
-        { label: "Reprendre là où je me suis arrêté", checked: settings.resumePlayback,
-          action: () => root.toggleSetting("resumePlayback", "Reprise de la lecture") },
-        { label: "Playlist automatique des épisodes", checked: settings.autoPlaylist,
-          action: () => root.toggleSetting("autoPlaylist", "Playlist automatique") },
-        { label: "Une seule fenêtre Lumen", checked: settings.singleInstance,
-          action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
         { label: "Préférences…", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
         { label: "Raccourcis clavier…", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
         { separator: true },
         { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
     ]
-
-    function toggleSetting(name, label) {
-        settings[name] = !settings[name]
-        settings.save()
-        osd(label + (settings[name] ? " activée" : " désactivée"))
-    }
 
     // Paramètres de la session précédente, appliqués une fois la fenêtre créée
     Component.onCompleted: {
