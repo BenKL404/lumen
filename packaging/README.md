@@ -38,13 +38,25 @@ flatpak run org.flatpak.Builder --user --install-deps-from=flathub --force-clean
 flatpak run io.github.benkl404.Lumen
 ```
 
-Pour Flathub : ouvrir une demande sur https://github.com/flathub/flathub avec le manifeste, le
-fichier `cargo-sources.json` et une source `git` (dépôt et commit publiés) à la place de
-`type: dir`. Ajouter des captures d'écran à la fiche AppStream avant l'envoi.
+Pour Flathub : demande d'ajout sur https://github.com/flathub/flathub (branche `new-pr`) avec
+le manifeste, `cargo-sources.json` et une source `git` (tag et commit publiés) à la place de
+`type: dir`. L'identifiant `io.github.benkl404.Lumen` doit correspondre au dépôt
+`github.com/BenKL404/lumen` (vérifié par le linter de Flathub). Les captures d'écran de la fiche
+AppStream sont dans `assets/screenshots/`, servies depuis le tag de la version.
+
+Vérification avant envoi (`flatpak-builder-lint`, fourni avec `org.flatpak.Builder`) :
+
+```bash
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest packaging/flatpak/io.github.benkl404.Lumen.yml
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder appstream assets/io.github.benkl404.Lumen.metainfo.xml
+```
 
 Permissions demandées (`finish-args`) : Wayland/X11, carte graphique, son, réseau (vidéos en
-ligne, sous-titres), accès aux fichiers (playlist automatique des fichiers voisins, sous-titres
-enregistrés à côté de la vidéo), mise en veille (`org.freedesktop.ScreenSaver`) et MPRIS.
+ligne, sous-titres), mise en veille (`org.freedesktop.ScreenSaver`) et MPRIS. Fichiers : dossiers
+Vidéos, Téléchargements, Musique et Bureau (captures), disques externes (`/media`, `/run/media`,
+`/mnt`). Flathub refuse `--filesystem=host` sans dérogation : ailleurs, une vidéo ouverte passe par
+le portail de documents et s'ouvre seule (pas de playlist automatique des fichiers voisins ;
+sous-titres téléchargés enregistrés dans le dossier de données de Lumen).
 
 ## AUR
 

@@ -12,11 +12,11 @@ Lecteur vidéo moderne et performant pour Linux, inspiré de PotPlayer.
 
 ## Télécharger
 
-Une **AppImage** (Linux x86_64) est jointe à chaque [version publiée](https://github.com/BenKL404/lumen-player/releases) :
+Une **AppImage** (Linux x86_64) est jointe à chaque [version publiée](https://github.com/BenKL404/lumen/releases) :
 
 ```bash
-chmod +x Lumen-1.0.0-x86_64.AppImage
-./Lumen-1.0.0-x86_64.AppImage
+chmod +x Lumen-*-x86_64.AppImage
+./Lumen-*-x86_64.AppImage
 ```
 
 Les fichiers Flatpak et AUR sont prêts dans [packaging/](packaging/README.md) mais pas encore

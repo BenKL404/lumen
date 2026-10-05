@@ -29,8 +29,30 @@
   </description>
 
   <launchable type="desktop-id">io.github.benkl404.Lumen.desktop</launchable>
-  <url type="homepage">https://github.com/BenKL404/lumen-player</url>
-  <url type="bugtracker">https://github.com/BenKL404/lumen-player/issues</url>
+  <url type="homepage">https://github.com/BenKL404/lumen</url>
+  <url type="bugtracker">https://github.com/BenKL404/lumen/issues</url>
+  <url type="vcs-browser">https://github.com/BenKL404/lumen</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#FFC56B</color>
+    <color type="primary" scheme_preference="dark">#1C2028</color>
+  </branding>
+
+  <!-- Images dans assets/screenshots/, servies depuis le tag de la version publiée -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Watching a video</caption>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/lecture.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Playlist docked next to the video</caption>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/playlist.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Preferences</caption>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/preferences.png</image>
+    </screenshot>
+  </screenshots>
 
   <categories>
     <category>AudioVideo</category>
@@ -48,6 +70,12 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.1" date="2026-10-05">
+      <description>
+        <p>Flathub release: access limited to the usual video folders and external drives.</p>
+        <p xml:lang="fr">Version Flathub : accès limité aux dossiers de vidéos habituels et aux disques externes.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-05">
       <description>
         <p>First complete release.</p>

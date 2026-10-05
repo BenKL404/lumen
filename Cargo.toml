@@ -1,10 +1,10 @@
 [package]
 name = "lumen"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "Lecteur vidéo moderne pour Linux, inspiré de PotPlayer"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/BenKL404/lumen-player"
+repository = "https://github.com/BenKL404/lumen"
 
 [dependencies]
 cxx = "1.0.95"
