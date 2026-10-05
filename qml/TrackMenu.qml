@@ -13,6 +13,7 @@ Rectangle {
 
     signal addSubtitleRequested()
     signal audioSettingsRequested()
+    signal searchSubtitlesRequested()
 
     function select(id) {
         video.command(["set", isSub ? "sid" : "aid", String(id)])
@@ -149,6 +150,12 @@ Rectangle {
             visible: menu.isSub
             label: "Ajouter un fichier de sous-titres…"
             onClicked: menu.addSubtitleRequested()
+        }
+        Entry {
+            theme: menu.theme
+            visible: menu.isSub
+            label: "Rechercher en ligne…"
+            onClicked: menu.searchSubtitlesRequested()
         }
 
         Item {

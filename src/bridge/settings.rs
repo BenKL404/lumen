@@ -48,6 +48,8 @@ pub mod qobject {
         // Filtres d'image : netteté 0…100, agrandissement 0 standard / 1 haute qualité / 2 FSR
         #[qproperty(i32, sharpness)]
         #[qproperty(i32, upscaler)]
+        // Clé d'API OpenSubtitles (recherche de sous-titres en ligne)
+        #[qproperty(QString, opensubtitles_api_key)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -140,6 +142,8 @@ pub struct SettingsFile {
     pub sharpness: i32,
     /// Agrandissement : 0 standard, 1 haute qualité, 2 AMD FSR (voir shaders.rs)
     pub upscaler: i32,
+    /// Clé d'API OpenSubtitles (gratuite, compte opensubtitles.com › API consumers)
+    pub opensubtitles_api_key: String,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -176,6 +180,7 @@ impl Default for SettingsFile {
             subtitle_scale: 100,
             sharpness: 0,
             upscaler: 0,
+            opensubtitles_api_key: String::new(),
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -201,6 +206,7 @@ impl SettingsFile {
         self.seek_long = self.seek_long.clamp(5, 600);
         self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
         self.sharpness = self.sharpness.clamp(0, 100);
+        self.opensubtitles_api_key = self.opensubtitles_api_key.trim().to_string();
         if !(0..=2).contains(&self.upscaler) {
             self.upscaler = 0;
         }
@@ -284,6 +290,7 @@ pub struct SettingsRust {
     subtitle_scale: i32,
     sharpness: i32,
     upscaler: i32,
+    opensubtitles_api_key: QString,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -326,6 +333,7 @@ impl From<SettingsFile> for SettingsRust {
             subtitle_scale: f.subtitle_scale,
             sharpness: f.sharpness,
             upscaler: f.upscaler,
+            opensubtitles_api_key: QString::from(&f.opensubtitles_api_key),
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -364,6 +372,7 @@ impl From<&SettingsRust> for SettingsFile {
             subtitle_scale: s.subtitle_scale,
             sharpness: s.sharpness,
             upscaler: s.upscaler,
+            opensubtitles_api_key: s.opensubtitles_api_key.to_string(),
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -470,6 +479,7 @@ mod tests {
             subtitle_scale: 120,
             sharpness: 40,
             upscaler: 2,
+            opensubtitles_api_key: "abc123".into(),
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier
