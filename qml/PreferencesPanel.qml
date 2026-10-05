@@ -28,6 +28,7 @@ Rectangle {
         { id: "video", label: "Vidéo" },
         { id: "audio", label: "Audio" },
         { id: "sous-titres", label: "Sous-titres" },
+        { id: "apparence", label: "Apparence" },
         { id: "raccourcis", label: "Raccourcis" }
     ]
 
@@ -106,6 +107,21 @@ Rectangle {
             { cat: "sous-titres", label: "Taille des sous-titres", type: "slider", min: 50, max: 300, neutral: 100, unit: " %",
               get: () => s.subtitleScale, set: (v) => s.subtitleScale = v },
 
+            { cat: "apparence", label: "Thème", desc: "Sombre, clair, OLED, ou un skin de ton dossier de skins", type: "choice",
+              options: JSON.parse(panel.utils.themes()).map(t => ({ label: t.label, value: t.id })),
+              get: () => s.theme, set: (v) => s.theme = v },
+            { cat: "apparence", label: "Couleur d'accent", desc: "Boutons actifs, progression, sélection", type: "swatches",
+              options: [{ label: "Thème", value: "" }, { value: "#FF8C1A" }, { value: "#F2A541" }, { value: "#E5484D" },
+                        { value: "#E93D82" }, { value: "#8E4EC6" }, { value: "#2D7FF9" }, { value: "#12A594" }, { value: "#46A758" }],
+              get: () => s.accent, set: (v) => s.accent = v },
+            { cat: "apparence", label: "Couleur personnalisée", desc: "Code hexadécimal, par exemple #3FA9F5", type: "text",
+              placeholder: "#RRGGBB", get: () => s.accent, set: (v) => s.accent = /^#[0-9a-fA-F]{6}$/.test(v.trim()) ? v.trim() : s.accent },
+            { cat: "apparence", label: "Taille de l'interface", desc: "Appliquée au prochain lancement de Lumen", type: "choice",
+              options: [{ label: "Compacte", value: 90 }, { label: "Normale", value: 100 }, { label: "Grande", value: 115 }, { label: "Très grande", value: 130 }],
+              get: () => s.uiScale, set: (v) => s.uiScale = v },
+            { cat: "apparence", label: "Skins", desc: "Fichiers JSON partageables : couleurs d'un thème (exemple fourni)", type: "button",
+              button: "Ouvrir le dossier", action: () => Qt.openUrlExternally(panel.utils.skinsFolderUrl()) },
+
             { cat: "raccourcis", label: "Modifier les raccourcis", desc: "Section [raccourcis] de settings.toml",
               type: "button", button: "Modifier…", action: () => { a.saveSettings(); Qt.openUrlExternally(s.fileUrl()) } },
             { cat: "raccourcis", label: "Appliquer les modifications", desc: "Relit le fichier sans relancer Lumen",
@@ -138,7 +154,7 @@ Rectangle {
         id: sidebar
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width: 210
-        color: Qt.rgba(0, 0, 0, 0.18)
+        color: panel.theme.shade
 
         Text {
             id: title
@@ -155,7 +171,7 @@ Rectangle {
             anchors { left: parent.left; right: parent.right; top: title.bottom; margins: 14; topMargin: 16 }
             height: 32
             radius: 6
-            color: Qt.rgba(0, 0, 0, 0.25)
+            color: panel.theme.field
             border.color: searchField.activeFocus ? panel.theme.accent : panel.theme.border
 
             Icon {
@@ -344,7 +360,7 @@ Rectangle {
                                     height: 26
                                     radius: 13
                                     color: selected ? Qt.rgba(panel.theme.accent.r, panel.theme.accent.g, panel.theme.accent.b, 0.18)
-                                         : optionArea.containsMouse ? panel.theme.surfaceHover : Qt.rgba(1, 1, 1, 0.05)
+                                         : optionArea.containsMouse ? panel.theme.surfaceHover : panel.theme.subtle
                                     border.color: selected ? panel.theme.accent : "transparent"
                                     Text {
                                         id: optionText
@@ -357,6 +373,40 @@ Rectangle {
                                         id: optionArea
                                         anchors.fill: parent
                                         hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: { row.r.set(parent.modelData.value); panel.changed() }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Component {
+                        id: swatchesControl
+                        Row {
+                            spacing: 6
+                            Repeater {
+                                model: row.r.options
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    readonly property bool selected: row.r.get() === modelData.value
+                                    // Pastille de couleur, ou « Thème » (accent du thème)
+                                    width: modelData.label ? themeText.implicitWidth + 16 : 24
+                                    height: 24
+                                    radius: 12
+                                    color: modelData.value !== "" ? modelData.value : panel.theme.subtle
+                                    border.width: selected ? 2 : 1
+                                    border.color: selected ? panel.theme.text : panel.theme.border
+                                    Text {
+                                        id: themeText
+                                        anchors.centerIn: parent
+                                        visible: parent.modelData.label !== undefined
+                                        text: parent.modelData.label || ""
+                                        color: panel.theme.text
+                                        font.pixelSize: 11
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: { row.r.set(parent.modelData.value); panel.changed() }
                                     }
@@ -397,7 +447,7 @@ Rectangle {
                             width: 200
                             height: 30
                             radius: 6
-                            color: Qt.rgba(0, 0, 0, 0.25)
+                            color: panel.theme.field
                             border.color: input.activeFocus ? panel.theme.accent : panel.theme.border
                             TextInput {
                                 id: input
@@ -426,7 +476,7 @@ Rectangle {
                             width: buttonText.implicitWidth + 24
                             height: 30
                             radius: 6
-                            color: buttonArea.containsMouse ? panel.theme.surfaceHover : Qt.rgba(1, 1, 1, 0.06)
+                            color: buttonArea.containsMouse ? panel.theme.surfaceHover : panel.theme.subtle
                             border.color: panel.theme.border
                             Text {
                                 id: buttonText
@@ -465,8 +515,8 @@ Rectangle {
                                     width: Math.max(24, keyText.implicitWidth + 14)
                                     height: 22
                                     radius: 4
-                                    color: Qt.rgba(1, 1, 1, 0.06)
-                                    border.color: Qt.rgba(1, 1, 1, 0.14)
+                                    color: panel.theme.subtle
+                                    border.color: panel.theme.strong
                                     Text {
                                         id: keyText
                                         anchors.centerIn: parent
@@ -483,7 +533,7 @@ Rectangle {
                         id: control
                         anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                         sourceComponent: ({
-                            "toggle": toggleControl, "choice": choiceControl, "slider": sliderControl,
+                            "toggle": toggleControl, "choice": choiceControl, "slider": sliderControl, "swatches": swatchesControl,
                             "text": textControl, "button": buttonControl, "keys": keysControl
                         })[row.r.type]
                     }

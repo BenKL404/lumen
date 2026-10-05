@@ -50,6 +50,11 @@ pub mod qobject {
         #[qproperty(i32, upscaler)]
         // Clé d'API OpenSubtitles (recherche de sous-titres en ligne)
         #[qproperty(QString, opensubtitles_api_key)]
+        // Apparence : thème (« dark », « light », « oled », « skin:<nom> »), accent (#RRGGBB,
+        // vide : celui du thème), taille de l'interface en % (au prochain lancement)
+        #[qproperty(QString, theme)]
+        #[qproperty(QString, accent)]
+        #[qproperty(i32, ui_scale)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -144,6 +149,12 @@ pub struct SettingsFile {
     pub upscaler: i32,
     /// Clé d'API OpenSubtitles (gratuite, compte opensubtitles.com › API consumers)
     pub opensubtitles_api_key: String,
+    /// Thème : « dark », « light », « oled » ou « skin:<fichier> » (voir themes.rs)
+    pub theme: String,
+    /// Couleur d'accent « #RRGGBB » ; vide : celle du thème
+    pub accent: String,
+    /// Taille de l'interface en % (90, 100, 115, 130), appliquée au lancement
+    pub ui_scale: i32,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -181,6 +192,9 @@ impl Default for SettingsFile {
             sharpness: 0,
             upscaler: 0,
             opensubtitles_api_key: String::new(),
+            theme: "dark".into(),
+            accent: String::new(),
+            ui_scale: 100,
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -207,6 +221,10 @@ impl SettingsFile {
         self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
         self.sharpness = self.sharpness.clamp(0, 100);
         self.opensubtitles_api_key = self.opensubtitles_api_key.trim().to_string();
+        self.ui_scale = self.ui_scale.clamp(75, 200);
+        if !super::themes::is_color(self.accent.trim()) {
+            self.accent = String::new();
+        }
         if !(0..=2).contains(&self.upscaler) {
             self.upscaler = 0;
         }
@@ -291,6 +309,9 @@ pub struct SettingsRust {
     sharpness: i32,
     upscaler: i32,
     opensubtitles_api_key: QString,
+    theme: QString,
+    accent: QString,
+    ui_scale: i32,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -334,6 +355,9 @@ impl From<SettingsFile> for SettingsRust {
             sharpness: f.sharpness,
             upscaler: f.upscaler,
             opensubtitles_api_key: QString::from(&f.opensubtitles_api_key),
+            theme: QString::from(&f.theme),
+            accent: QString::from(&f.accent),
+            ui_scale: f.ui_scale,
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -373,6 +397,9 @@ impl From<&SettingsRust> for SettingsFile {
             sharpness: s.sharpness,
             upscaler: s.upscaler,
             opensubtitles_api_key: s.opensubtitles_api_key.to_string(),
+            theme: s.theme.to_string(),
+            accent: s.accent.to_string(),
+            ui_scale: s.ui_scale,
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -480,6 +507,9 @@ mod tests {
             sharpness: 40,
             upscaler: 2,
             opensubtitles_api_key: "abc123".into(),
+            theme: "light".into(),
+            accent: "#2D7FF9".into(),
+            ui_scale: 115,
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier

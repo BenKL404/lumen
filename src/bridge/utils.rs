@@ -85,6 +85,19 @@ pub mod qobject {
         #[cxx_name = "scalingOptions"]
         fn scaling_options(self: &Utils, upscaler: i32) -> QStringList;
 
+        /// Palette (JSON jeton -> couleur) d'un thème et d'un accent (voir themes.rs)
+        #[qinvokable]
+        fn palette(self: &Utils, theme: &QString, accent: &QString) -> QString;
+
+        /// Thèmes proposés (JSON [{ id, label }]) : intégrés et skins de l'utilisateur
+        #[qinvokable]
+        fn themes(self: &Utils) -> QString;
+
+        /// Dossier des skins (créé avec un skin d'exemple s'il est vide), en URL file://
+        #[qinvokable]
+        #[cxx_name = "skinsFolderUrl"]
+        fn skins_folder_url(self: &Utils) -> QString;
+
         /// yt-dlp à utiliser pour les vidéos en ligne (vide : celui du PATH)
         #[qinvokable]
         #[cxx_name = "ytdlPath"]
@@ -217,6 +230,25 @@ impl qobject::Utils {
             list.append(QString::from(value));
         }
         QStringList::from(&list)
+    }
+
+    pub fn palette(&self, theme: &QString, accent: &QString) -> QString {
+        use super::themes::{palette, skins_dir};
+        QString::from(&palette(&theme.to_string(), &accent.to_string(), &skins_dir()).to_string())
+    }
+
+    pub fn themes(&self) -> QString {
+        QString::from(&super::themes::themes(&super::themes::skins_dir()).to_string())
+    }
+
+    pub fn skins_folder_url(&self) -> QString {
+        use super::themes::{skins_dir, EXAMPLE_SKIN};
+        let dir = skins_dir();
+        let empty = std::fs::read_dir(&dir).map_or(true, |mut entries| entries.next().is_none());
+        if empty && std::fs::create_dir_all(&dir).is_ok() {
+            let _ = std::fs::write(dir.join("nord.json"), EXAMPLE_SKIN);
+        }
+        QString::from(&super::playlist::file_url(&dir.to_string_lossy()))
     }
 
     pub fn ytdl_path(&self) -> QString {

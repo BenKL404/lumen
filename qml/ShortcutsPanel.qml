@@ -86,7 +86,7 @@ Rectangle {
             width: ListView.view.width
             height: 34
             radius: 6
-            color: index % 2 === 0 ? Qt.rgba(1, 1, 1, 0.025) : "transparent"
+            color: index % 2 === 0 ? panel.theme.subtle : "transparent"
 
             Text {
                 anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
@@ -115,8 +115,8 @@ Rectangle {
                         width: Math.max(24, keyText.implicitWidth + 14)
                         height: 22
                         radius: 4
-                        color: Qt.rgba(1, 1, 1, 0.06)
-                        border.color: Qt.rgba(1, 1, 1, 0.14)
+                        color: panel.theme.subtle
+                        border.color: panel.theme.strong
 
                         Text {
                             id: keyText
@@ -161,7 +161,7 @@ Rectangle {
             width: fbRow.implicitWidth + 22
             height: 30
             radius: 6
-            color: fbArea.containsMouse ? theme.surfaceHover : Qt.rgba(1, 1, 1, 0.05)
+            color: fbArea.containsMouse ? theme.surfaceHover : panel.theme.subtle
 
             Row {
                 id: fbRow

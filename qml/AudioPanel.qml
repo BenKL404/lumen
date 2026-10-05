@@ -75,7 +75,7 @@ Rectangle {
             width: 14
             height: 14
             radius: 7
-            color: eqArea.pressed || eqArea.containsMouse ? eq.theme.text : Qt.rgba(1, 1, 1, 0.85)
+            color: eqArea.pressed || eqArea.containsMouse ? eq.theme.text : eq.theme.text
         }
         MouseArea {
             id: eqArea
@@ -103,7 +103,7 @@ Rectangle {
         height: 26
         radius: 13
         color: selected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.18)
-             : chipArea.containsMouse ? theme.surfaceHover : Qt.rgba(1, 1, 1, 0.05)
+             : chipArea.containsMouse ? theme.surfaceHover : theme.subtle
         border.color: selected ? theme.accent : "transparent"
 
         Text {

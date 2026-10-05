@@ -18,18 +18,29 @@ Window {
     // Fenêtre sans bordure : la barre de titre est dessinée par Lumen
     flags: Qt.Window | Qt.FramelessWindowHint | (pinned ? Qt.WindowStaysOnTopHint : 0)
 
-    // Design tokens : un seul endroit pour toute l'identité visuelle
+    // Design tokens : palette du thème choisi (themes.rs : sombre, clair, OLED, skins JSON)
+    // et couleur d'accent ; aucune couleur n'est écrite en dur dans l'interface
+    readonly property var palette: JSON.parse(utils.palette(settings.theme, settings.accent))
     readonly property QtObject theme: QtObject {
-        readonly property color background: "#0B0D10"
-        readonly property color chrome: "#13161B"   // barres fixes (titre, contrôles, playlist)
-        readonly property color menu: "#1A1E24"     // menus déroulants
-        readonly property color surface: Qt.rgba(0.07, 0.08, 0.10, 0.86) // éléments flottants
-        readonly property color surfaceHover: Qt.rgba(1, 1, 1, 0.08)
-        readonly property color border: Qt.rgba(1, 1, 1, 0.08)
-        readonly property color text: "#ECE8E1"
-        readonly property color muted: "#8B9099"
-        readonly property color track: Qt.rgba(1, 1, 1, 0.16)
-        readonly property color accent: "#FF8C1A"
+        readonly property color background: root.palette.background
+        readonly property color chrome: root.palette.chrome         // barres fixes
+        readonly property color menu: root.palette.menu             // menus et fenêtres
+        readonly property color surface: root.palette.surface       // éléments flottants
+        readonly property color surfaceHover: root.palette.surfaceHover
+        readonly property color border: root.palette.border
+        readonly property color text: root.palette.text
+        readonly property color muted: root.palette.muted
+        readonly property color track: root.palette.track
+        readonly property color subtle: root.palette.subtle         // fond discret des boutons
+        readonly property color raised: root.palette.raised         // séparateurs, sélection
+        readonly property color strong: root.palette.strong         // contours marqués
+        readonly property color field: root.palette.field           // champs de saisie
+        readonly property color shade: root.palette.shade
+        readonly property color divider: root.palette.divider
+        readonly property color accent: root.palette.accent
+        readonly property color onAccent: root.palette.onAccent     // texte sur l'accent
+        // Texte posé sur la vidéo (messages, titre en plein écran) : clair dans tous les thèmes
+        readonly property color onVideo: "#ECE8E1"
         readonly property int radius: 14
         readonly property int animation: 180
     }
@@ -848,7 +859,7 @@ Window {
             Text {
                 anchors { left: parent.left; top: parent.top; margins: 22; right: parent.right }
                 text: video.mediaTitle
-                color: theme.text
+                color: theme.onVideo
                 font.pixelSize: 17
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -867,7 +878,7 @@ Window {
 
             Text {
                 id: osdText
-                color: theme.text
+                color: theme.onVideo
                 font.pixelSize: 20
                 font.weight: Font.DemiBold
                 style: Text.Outline

@@ -13,7 +13,7 @@ Item {
     // Option activée (répétition, aléatoire…) : icône en couleur d'accent
     property bool active: false
 
-    readonly property color contentColor: emphasized ? "#1A1206" : active ? theme.accent : theme.text
+    readonly property color contentColor: emphasized ? theme.onAccent : active ? theme.accent : theme.text
 
     signal clicked()
 
