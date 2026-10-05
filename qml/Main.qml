@@ -80,9 +80,8 @@ Window {
           action: () => root.toggleSetting("autoPlaylist", "Playlist automatique") },
         { label: "Une seule fenêtre Lumen", checked: settings.singleInstance,
           action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
-        { label: "Préférences…", icon: "settings", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
-        { label: "Raccourcis clavier…", icon: "keyboard", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
-        { label: "Effacer l'historique de lecture", icon: "trash", action: () => { history.clear(); root.osd("Historique de lecture effacé") } },
+        { label: "Préférences…", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
+        { label: "Raccourcis clavier…", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
         { separator: true },
         { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
     ]
