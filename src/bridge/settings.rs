@@ -17,6 +17,7 @@ pub mod qobject {
         #[qproperty(bool, playlist_open)]
         #[qproperty(bool, resume_playback)]
         #[qproperty(bool, auto_playlist)]
+        #[qproperty(bool, single_instance)]
         // Réglages d'image : -100…100, zoom en % (25…400)
         #[qproperty(i32, brightness)]
         #[qproperty(i32, contrast)]
@@ -54,6 +55,8 @@ pub struct SettingsFile {
     pub resume_playback: bool,
     /// Ajouter à la playlist les fichiers du même nom (épisodes, parties…)
     pub auto_playlist: bool,
+    /// Ouvrir les fichiers dans la fenêtre Lumen déjà ouverte plutôt qu'une nouvelle
+    pub single_instance: bool,
     /// Réglages d'image, de -100 à 100 (0 : neutre)
     pub brightness: i32,
     pub contrast: i32,
@@ -77,6 +80,7 @@ impl Default for SettingsFile {
             playlist_open: false,
             resume_playback: true,
             auto_playlist: true,
+            single_instance: true,
             brightness: 0,
             contrast: 0,
             saturation: 0,
@@ -131,7 +135,7 @@ impl SettingsFile {
     }
 }
 
-fn settings_path() -> PathBuf {
+pub fn settings_path() -> PathBuf {
     let config = std::env::var_os("XDG_CONFIG_HOME")
         .filter(|v| !v.is_empty())
         .map(PathBuf::from)
@@ -151,6 +155,7 @@ pub struct SettingsRust {
     playlist_open: bool,
     resume_playback: bool,
     auto_playlist: bool,
+    single_instance: bool,
     brightness: i32,
     contrast: i32,
     saturation: i32,
@@ -172,6 +177,7 @@ impl From<SettingsFile> for SettingsRust {
             playlist_open: f.playlist_open,
             resume_playback: f.resume_playback,
             auto_playlist: f.auto_playlist,
+            single_instance: f.single_instance,
             brightness: f.brightness,
             contrast: f.contrast,
             saturation: f.saturation,
@@ -195,6 +201,7 @@ impl From<&SettingsRust> for SettingsFile {
             playlist_open: s.playlist_open,
             resume_playback: s.resume_playback,
             auto_playlist: s.auto_playlist,
+            single_instance: s.single_instance,
             brightness: s.brightness,
             contrast: s.contrast,
             saturation: s.saturation,
@@ -244,6 +251,7 @@ mod tests {
             playlist_open: true,
             resume_playback: false,
             auto_playlist: false,
+            single_instance: false,
             brightness: 10,
             contrast: -5,
             saturation: 20,
