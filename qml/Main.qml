@@ -35,6 +35,9 @@ Window {
     }
 
     property bool controlsVisible: true
+    // Un menu ou un panneau est ouvert : les contrôles restent visibles, Échap et un clic à côté le ferment
+    readonly property bool anyPopupOpen: trackMenu.visible || imagePanel.visible || audioPanel.visible
+        || shortcutsPanel.visible || urlPanel.visible || appMenu.visible || contextMenu.visible
     property bool pinned: false
     property bool wasMaximized: false
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -94,6 +97,8 @@ Window {
         video.volume = settings.volume
         video.muted = settings.muted
         imageKeys.forEach(k => image[k] = settings[k])
+        sound.equalizer = Array.from(settings.equalizer)
+        sound.normalize = settings.normalizeVolume
         // Vidéos en ligne : yt-dlp récent et moteur JavaScript (voir utils.rs), 1080p au plus
         const ytdl = utils.ytdlPath()
         if (ytdl !== "")
@@ -117,6 +122,8 @@ Window {
         settings.shuffle = playlist.shuffle
         settings.playlistOpen = playlistPanel.open
         imageKeys.forEach(k => settings[k] = image[k])
+        settings.equalizer = sound.equalizer
+        settings.normalizeVolume = sound.normalize
         settings.maximized = fullscreen ? wasMaximized : visibility === Window.Maximized
         // La taille n'est connue qu'en fenêtré ; sans la largeur de la playlist accolée
         if (visibility === Window.Windowed) {
@@ -208,6 +215,9 @@ Window {
                 (audioTracks.length > 0 ? audioTracks.map(t => trackEntry(t, "aid"))
                                         : [{ label: "Aucune piste audio", enabled: false }]).concat([
                 { separator: true },
+                { label: "Normaliser le volume", shortcut: root.keyLabel("normaliser"), checked: root.sound.normalize, action: () => root.toggleNormalize() },
+                { label: "Égaliseur et son…", icon: "sliders", shortcut: root.keyLabel("son"), action: () => root.toggleAudioPanel() },
+                { separator: true },
                 { label: "Muet", shortcut: root.keyLabel("muet"), checked: video.muted, action: () => root.toggleMute() },
                 { label: "Augmenter le volume", shortcut: root.keyLabel("volume_plus"), action: () => root.changeVolume(5) },
                 { label: "Baisser le volume", shortcut: root.keyLabel("volume_moins"), action: () => root.changeVolume(-5) }
@@ -262,6 +272,36 @@ Window {
     }
 
     readonly property var imageKeys: ["brightness", "contrast", "saturation", "gamma", "hue", "zoom"]
+
+    // --------------------------------------------------------------- Son
+    // Égaliseur et normalisation : chaîne de filtres `af` (audio.rs), mémorisés ;
+    // décalage audio : propre à chaque fichier (remis à zéro à l'ouverture)
+    readonly property QtObject sound: QtObject {
+        property var equalizer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        property bool normalize: false
+        property real delay: 0
+
+        function apply() { video.command(["set", "af", utils.audioFilters(equalizer, normalize)]) }
+        onEqualizerChanged: apply()
+        onNormalizeChanged: apply()
+        onDelayChanged: video.command(["set", "audio-delay", String(delay)])
+    }
+
+    function toggleAudioPanel() {
+        const show = !audioPanel.visible
+        closePopups()
+        audioPanel.visible = show
+    }
+
+    function toggleNormalize() {
+        sound.normalize = !sound.normalize
+        osd(sound.normalize ? "Volume normalisé" : "Normalisation désactivée")
+    }
+
+    function shiftAudioDelay(step) {
+        sound.delay = Math.round((sound.delay + step) * 10) / 10
+        osd("Décalage audio " + (sound.delay > 0 ? "+" : "") + sound.delay.toFixed(1) + " s")
+    }
 
     function toggleImagePanel() {
         trackMenu.visible = false
@@ -444,6 +484,7 @@ Window {
     }
 
     function closePopups() {
+        audioPanel.visible = false
         urlPanel.visible = false
         shortcutsPanel.visible = false
         trackMenu.visible = false
@@ -546,6 +587,7 @@ Window {
         const found = history.load(currentUrl)
         // Le décalage est un réglage global de mpv : le remettre à zéro pour un nouveau fichier
         video.subDelay = history.subDelay
+        sound.delay = 0
         if (!found || !settings.resumePlayback)
             return
 
@@ -664,7 +706,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !trackMenu.visible && !imagePanel.visible && !shortcutsPanel.visible && !urlPanel.visible && !appMenu.visible && !contextMenu.visible && !(root.fullscreen && playlistPanel.open))
+                    && !root.anyPopupOpen && !(root.fullscreen && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -956,9 +998,7 @@ Window {
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || urlPanel.visible
-                 || appMenu.visible || contextMenu.visible
-                 || (root.fullscreen && playlistPanel.open)
+        enabled: root.anyPopupOpen || (root.fullscreen && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
     }
@@ -1005,6 +1045,20 @@ Window {
             trackMenu.visible = false
             subtitleDialog.open()
         }
+        onAudioSettingsRequested: {
+            trackMenu.visible = false
+            root.toggleAudioPanel()
+        }
+    }
+
+    AudioPanel {
+        id: audioPanel
+        anchors { right: controls.right; bottom: controls.top; bottomMargin: 10; rightMargin: controls.floating ? 0 : 10 }
+        visible: false
+        theme: root.theme
+        sound: root.sound
+        utils: utils
+        onCloseRequested: visible = false
     }
 
     ImagePanel {
@@ -1150,6 +1204,10 @@ Window {
         "volume_plus": () => changeVolume(5),
         "volume_moins": () => changeVolume(-5),
         "muet": () => toggleMute(),
+        "son": () => toggleAudioPanel(),
+        "normaliser": () => toggleNormalize(),
+        "decalage_audio_moins": () => shiftAudioDelay(-0.1),
+        "decalage_audio_plus": () => shiftAudioDelay(0.1),
         "plein_ecran": () => toggleFullScreen(),
         "ouvrir": () => fileDialog.open(),
         "ouvrir_dossier": () => folderDialog.open(),
@@ -1235,8 +1293,7 @@ Window {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (trackMenu.visible || imagePanel.visible || shortcutsPanel.visible || urlPanel.visible
-                    || appMenu.visible || contextMenu.visible) {
+            if (root.anyPopupOpen) {
                 root.closePopups()
             } else if (playlistPanel.open) {
                 root.setPlaylistOpen(false)

@@ -12,6 +12,7 @@ Rectangle {
     readonly property bool isSub: kind === "sub"
 
     signal addSubtitleRequested()
+    signal audioSettingsRequested()
 
     function select(id) {
         video.command(["set", isSub ? "sid" : "aid", String(id)])
@@ -119,6 +120,20 @@ Rectangle {
             leftPadding: 28
             topPadding: 6
             bottomPadding: 6
+        }
+
+        // ------------------------------------- Audio : égaliseur, normalisation, décalage
+        Rectangle {
+            visible: !menu.isSub
+            width: parent.width
+            height: 1
+            color: Qt.rgba(1, 1, 1, 0.08)
+        }
+        Entry {
+            theme: menu.theme
+            visible: !menu.isSub
+            label: "Égaliseur, normalisation et décalage…"
+            onClicked: menu.audioSettingsRequested()
         }
 
         // ------------------------------------- Sous-titres : fichier et décalage
