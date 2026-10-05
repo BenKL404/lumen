@@ -151,6 +151,28 @@ Couleurs redéfinissables : `background`, `chrome`, `menu`, `surface`, `surfaceH
 
 ---
 
+## Extensions
+
+Lumen charge les scripts mpv (Lua `.lua` ou JavaScript `.js`) placés dans
+`~/.config/lumen/scripts/`. Préférences (F5) › **Extensions** les liste avec un interrupteur
+chacun ; une extension d'exemple, **Passer les génériques**, y est fournie (désactivée).
+
+En-tête reconnu, et message affiché dans le style de Lumen :
+
+```lua
+-- Nom : Mon extension
+-- Description : ce qu'elle fait, affiché dans les préférences
+
+mp.register_event("file-loaded", function()
+    mp.commandv("script-message", "lumen-osd", "Bonne séance !")
+end)
+```
+
+API des scripts : https://mpv.io/manual/stable/#lua-scripting. Les raccourcis clavier sont gérés
+par Lumen (F1) : un script ne reçoit pas les touches, il réagit aux événements et aux propriétés.
+
+---
+
 ## Données et paramètres
 
 | Fichier | Contenu |

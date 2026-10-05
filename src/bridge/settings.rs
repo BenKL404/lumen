@@ -55,6 +55,8 @@ pub mod qobject {
         #[qproperty(QString, theme)]
         #[qproperty(QString, accent)]
         #[qproperty(i32, ui_scale)]
+        // Extensions (scripts de ~/.config/lumen/scripts) désactivées, par nom de fichier
+        #[qproperty(QStringList, disabled_extensions)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -155,6 +157,8 @@ pub struct SettingsFile {
     pub accent: String,
     /// Taille de l'interface en % (90, 100, 115, 130), appliquée au lancement
     pub ui_scale: i32,
+    /// Extensions désactivées (noms de fichiers dans ~/.config/lumen/scripts)
+    pub disabled_extensions: Vec<String>,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -195,6 +199,7 @@ impl Default for SettingsFile {
             theme: "dark".into(),
             accent: String::new(),
             ui_scale: 100,
+            disabled_extensions: Vec::new(),
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -312,6 +317,7 @@ pub struct SettingsRust {
     theme: QString,
     accent: QString,
     ui_scale: i32,
+    disabled_extensions: QStringList,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -358,6 +364,13 @@ impl From<SettingsFile> for SettingsRust {
             theme: QString::from(&f.theme),
             accent: QString::from(&f.accent),
             ui_scale: f.ui_scale,
+            disabled_extensions: {
+                let mut list = QList::<QString>::default();
+                for file in &f.disabled_extensions {
+                    list.append(QString::from(file));
+                }
+                QStringList::from(&list)
+            },
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -400,6 +413,7 @@ impl From<&SettingsRust> for SettingsFile {
             theme: s.theme.to_string(),
             accent: s.accent.to_string(),
             ui_scale: s.ui_scale,
+            disabled_extensions: QList::<QString>::from(&s.disabled_extensions).iter().map(|f| f.to_string()).collect(),
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -510,6 +524,7 @@ mod tests {
             theme: "light".into(),
             accent: "#2D7FF9".into(),
             ui_scale: 115,
+            disabled_extensions: vec!["passer-les-generiques.lua".into()],
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier

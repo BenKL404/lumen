@@ -201,6 +201,16 @@ void MpvItem::handleEvents()
             setHasMedia(true);
             emit fileLoaded();
             break;
+        case MPV_EVENT_CLIENT_MESSAGE: {
+            const auto *message = static_cast<mpv_event_client_message *>(event->data);
+            if (message && message->num_args > 0) {
+                QStringList arguments;
+                for (int i = 1; i < message->num_args; ++i)
+                    arguments << QString::fromUtf8(message->args[i]);
+                emit scriptMessage(QString::fromUtf8(message->args[0]), arguments);
+            }
+            break;
+        }
         case MPV_EVENT_END_FILE: {
             const auto *end = static_cast<mpv_event_end_file *>(event->data);
             if (end && end->reason == MPV_END_FILE_REASON_ERROR) {

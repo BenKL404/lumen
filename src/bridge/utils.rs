@@ -98,6 +98,26 @@ pub mod qobject {
         #[cxx_name = "skinsFolderUrl"]
         fn skins_folder_url(self: &Utils) -> QString;
 
+        /// Extensions trouvées (JSON [{ file, name, description, enabled, path }])
+        #[qinvokable]
+        fn extensions(self: &Utils, disabled: &QStringList) -> QString;
+
+        /// Chemins des extensions à charger
+        #[qinvokable]
+        #[cxx_name = "extensionPaths"]
+        fn extension_paths(self: &Utils, disabled: &QStringList) -> QStringList;
+
+        /// Crée le dossier des extensions avec un exemple s'il est vide ; renvoie le nom de
+        /// l'exemple s'il vient d'être créé (à désactiver par défaut), sinon une chaîne vide
+        #[qinvokable]
+        #[cxx_name = "prepareExtensionsFolder"]
+        fn prepare_extensions_folder(self: &Utils) -> QString;
+
+        /// Dossier des extensions, en URL file://
+        #[qinvokable]
+        #[cxx_name = "extensionsFolderUrl"]
+        fn extensions_folder_url(self: &Utils) -> QString;
+
         /// yt-dlp à utiliser pour les vidéos en ligne (vide : celui du PATH)
         #[qinvokable]
         #[cxx_name = "ytdlPath"]
@@ -251,6 +271,29 @@ impl qobject::Utils {
         QString::from(&super::playlist::file_url(&dir.to_string_lossy()))
     }
 
+    pub fn extensions(&self, disabled: &QStringList) -> QString {
+        let disabled = string_list(disabled);
+        QString::from(&super::extensions::list(&super::extensions::scripts_dir(), &disabled).to_string())
+    }
+
+    pub fn extension_paths(&self, disabled: &QStringList) -> QStringList {
+        let disabled = string_list(disabled);
+        let mut list = QList::<QString>::default();
+        for path in super::extensions::enabled_paths(&super::extensions::scripts_dir(), &disabled) {
+            list.append(QString::from(&path));
+        }
+        QStringList::from(&list)
+    }
+
+    pub fn prepare_extensions_folder(&self) -> QString {
+        use super::extensions::{ensure_example, scripts_dir, EXAMPLE_FILE};
+        QString::from(if ensure_example(&scripts_dir()) { EXAMPLE_FILE } else { "" })
+    }
+
+    pub fn extensions_folder_url(&self) -> QString {
+        QString::from(&super::playlist::file_url(&super::extensions::scripts_dir().to_string_lossy()))
+    }
+
     pub fn ytdl_path(&self) -> QString {
         let found = find_ytdl(&home(), &std::env::var("PATH").unwrap_or_default());
         QString::from(&found.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())
@@ -402,6 +445,10 @@ pub fn thumbnail_url(url: &str, seconds: f64) -> String {
 }
 
 use std::path::{Path, PathBuf};
+
+fn string_list(list: &QStringList) -> Vec<String> {
+    QList::<QString>::from(list).iter().map(|s| s.to_string()).collect()
+}
 
 fn home() -> PathBuf {
     std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default()

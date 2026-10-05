@@ -29,6 +29,7 @@ Rectangle {
         { id: "audio", label: "Audio" },
         { id: "sous-titres", label: "Sous-titres" },
         { id: "apparence", label: "Apparence" },
+        { id: "extensions", label: "Extensions" },
         { id: "raccourcis", label: "Raccourcis" }
     ]
 
@@ -42,6 +43,9 @@ Rectangle {
     }
 
     // Types : toggle, choice (options), slider (min, max, unit), text (placeholder), button, keys
+    // Relu à l'ouverture du dossier ou sur « Actualiser » (fichiers ajoutés entre-temps)
+    property int extensionsVersion: 0
+
     readonly property var rows: {
         const s = settings, a = app, img = image, snd = sound, pl = playlist
         const imageRow = (key, label, min, max, neutral, unit) => ({
@@ -127,7 +131,26 @@ Rectangle {
             { cat: "raccourcis", label: "Appliquer les modifications", desc: "Relit le fichier sans relancer Lumen",
               type: "button", button: "Recharger", action: () => { s.reloadShortcuts(); a.osd("Raccourcis rechargés") } }
         ]
-        return list.concat(s.shortcutActions().map(id => ({
+        extensionsVersion
+        const extensionRows = [
+            { cat: "extensions", label: "Dossier des extensions",
+              desc: "Scripts mpv (.lua, .js) dans ~/.config/lumen/scripts",
+              type: "button", button: "Ouvrir", action: () => { panel.utils.prepareExtensionsFolder(); Qt.openUrlExternally(panel.utils.extensionsFolderUrl()) } },
+            { cat: "extensions", label: "Scripts ajoutés au dossier", desc: "Relire la liste ; désactiver un script prend effet au prochain lancement",
+              type: "button", button: "Actualiser", action: () => panel.extensionsVersion++ }
+        ].concat(JSON.parse(panel.utils.extensions(s.disabledExtensions)).map(ext => ({
+            cat: "extensions", label: ext.name, desc: ext.description || ext.file, type: "toggle",
+            get: () => Array.from(s.disabledExtensions).indexOf(ext.file) < 0,
+            set: (on) => {
+                const disabled = Array.from(s.disabledExtensions).filter(f => f !== ext.file)
+                if (!on)
+                    disabled.push(ext.file)
+                s.disabledExtensions = disabled
+                if (on)
+                    a.loadExtension(ext.path)
+            }
+        })))
+        return list.concat(extensionRows, s.shortcutActions().map(id => ({
             cat: "raccourcis", label: s.actionLabel(id), type: "keys", action_id: id
         })))
     }

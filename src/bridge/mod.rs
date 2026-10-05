@@ -1,5 +1,6 @@
 pub mod app;
 pub mod audio;
+pub mod extensions;
 pub mod history;
 pub mod mpris;
 pub mod online_subtitles;
