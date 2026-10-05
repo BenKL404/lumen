@@ -25,6 +25,7 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("decalage_audio_moins", "Son −0,1 s", &["Shift+Z"]),
     ("decalage_audio_plus", "Son +0,1 s", &["Shift+X"]),
     ("plein_ecran", "Plein écran", &["F", "Return"]),
+    ("mode_mini", "Mode mini", &["Ctrl+M"]),
     ("ouvrir", "Ouvrir un fichier", &["O"]),
     ("ouvrir_dossier", "Ouvrir un dossier", &["Ctrl+O"]),
     ("ouvrir_url", "Ouvrir une vidéo en ligne", &["Ctrl+U"]),
@@ -54,6 +55,7 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("retirer_de_la_playlist", "Retirer de la playlist", &["Delete"]),
     ("raccourcis", "Raccourcis clavier", &["F1"]),
     ("preferences", "Préférences", &["F5"]),
+    ("informations", "Informations sur le fichier", &["Tab"]),
 ];
 
 /// Touches d'une action : une seule ("F6") ou une liste (["F", "Return"]) dans le fichier.

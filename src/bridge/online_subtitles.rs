@@ -62,7 +62,7 @@ use serde_json::{json, Value};
 use super::utils::{file_name, is_online, local_path};
 
 const API: &str = "https://api.opensubtitles.com/api/v1";
-const USER_AGENT: &str = "Lumen v0.1";
+const USER_AGENT: &str = concat!("Lumen v", env!("CARGO_PKG_VERSION"));
 
 #[derive(Default)]
 pub struct SubtitleSearchRust {

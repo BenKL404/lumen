@@ -6,8 +6,8 @@ Lecteur vidéo moderne et performant pour Linux, inspiré de PotPlayer.
 
 **Stack :** Rust + CXX-Qt + QML (Qt 6) + libmpv
 
-> Statut : squelette de départ (v0.1). Le code n'a pas encore été compilé de bout en bout ;
-> attends-toi à quelques ajustements mineurs lors du premier build.
+> Version 1.0 : toute la feuille de route est réalisée (voir [FONCTIONNALITES.md](FONCTIONNALITES.md)).
+> Paquets : AppImage, Flatpak et AUR (voir [packaging/README.md](packaging/README.md)).
 
 ---
 
@@ -252,81 +252,48 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 
 ---
 
-## 5. Fonctionnalités de la v0.1
+## 5. Fonctionnalités
 
-- Lecture de tous les formats supportés par FFmpeg
-- Décodage matériel automatique (`hwdec=auto-safe`), sans copie sous X11 et Wayland
-- Ouverture par dialogue ou par glisser-déposer
-- Barre de contrôle qui se masque automatiquement pendant la lecture
-- Double-clic = lecture / pause, triple-clic = plein écran, molette = volume
-- Info-bulle temporelle au survol de la barre de progression
-- Affichage OSD des actions (volume, vitesse, saut…)
+- **Lecture** : tous les formats de FFmpeg, décodage matériel, reprise là où on s'est arrêté
+  (pistes, sous-titres, décalage), proposition de reprendre la dernière vidéo au démarrage
+- **Playlist** : épisodes et parties du même nom ajoutés automatiquement, dossiers, aléatoire,
+  répétition, glisser-déposer, recherche, durées
+- **Pistes** : audio et sous-titres, sous-titres externes, recherche en ligne (OpenSubtitles),
+  décalages audio et sous-titres
+- **Navigation** : miniatures au survol, chapitres, signets, boucle A-B
+- **Image et son** : luminosité, contraste…, netteté (AMD CAS), agrandissement (FSR),
+  égaliseur 10 bandes, normalisation du volume
+- **En ligne** : YouTube et la plupart des sites (yt-dlp)
+- **Bureau** : MPRIS (touches multimédia, applet), pas de mise en veille pendant un film,
+  « Ouvrir avec », fenêtre unique, sélecteur de fichiers natif
+- **Interface** : style PotPlayer, playlist accolée, mode mini, fenêtre adaptée à la vidéo,
+  panneau d'informations, thèmes et skins, préférences (F5), raccourcis personnalisables (F1),
+  extensions (scripts mpv)
 
 ### Raccourcis clavier
+
+Liste complète et modifiable dans Lumen : **F1** (voir aussi la section « Raccourcis
+personnalisables »).
 
 | Touche            | Action                        |
 |-------------------|-------------------------------|
 | Espace            | Lecture / pause               |
-| ← / →             | Reculer / avancer de 5 s      |
-| Ctrl + ← / →      | Reculer / avancer de 30 s     |
+| ← / →             | Saut court                    |
+| Ctrl + ← / →      | Saut long                     |
 | ↑ / ↓             | Volume ±5 %                   |
-| M                 | Muet                          |
 | F ou Entrée       | Plein écran                   |
-| Échap             | Quitter le plein écran        |
-| O                 | Ouvrir un fichier             |
-| S                 | Capture d'écran (Bureau)      |
-| . / ,             | Image suivante / précédente   |
-| ] / [             | Vitesse ±0,1                  |
-| Retour arrière    | Vitesse normale               |
-| J                 | Piste de sous-titres suivante |
-| A                 | Piste audio suivante          |
-| Z / X             | Décalage sous-titres ∓0,1 s   |
-| PgUp / PgDn       | Fichier précédent / suivant   |
-| F6                | Afficher / masquer la playlist |
-| Ctrl+PgUp / PgDn  | Chapitre précédent / suivant  |
-| L                 | Boucle A-B (A, B, désactiver) |
-| B                 | Ajouter un signet             |
-| I                 | Réglages d'image              |
-| F1                | Liste des raccourcis          |
-| F5                | Préférences                   |
-| Ctrl+J            | Sous-titres en ligne          |
-| Ctrl+U            | Ouvrir une vidéo en ligne     |
-| E                 | Égaliseur et son              |
-| N                 | Normaliser le volume          |
-| Maj+Z / Maj+X     | Décalage audio ∓0,1 s         |
-| Ctrl+V            | Coller un lien vidéo          |
-| R / H             | Répétition / aléatoire        |
-| Ctrl+O            | Ouvrir un dossier             |
+| O / Ctrl+O        | Ouvrir un fichier / un dossier|
+| Ctrl+U / Ctrl+V   | Vidéo en ligne / coller un lien |
+| F5 / F1           | Préférences / raccourcis      |
+| Tab               | Informations sur le fichier   |
 
 ---
 
-## 6. Feuille de route
+## 6. Idées pour la suite
 
-### v0.2 — Pistes et mémoire
-- Menus de sélection des pistes audio et sous-titres (propriété mpv `track-list`)
-- Chargement de sous-titres externes et réglage du décalage
-- Reprise de lecture à la dernière position (Rust + `rusqlite`)
-- Playlist et lecture du fichier suivant dans le dossier
-
-### v0.3 — Confort PotPlayer
-- Miniatures au survol de la barre (service Rust séparé, `ffmpeg-next`, cache disque)
-- Boucle A-B, signets, chapitres
-- Réglages d'image (luminosité, contraste, saturation, rotation, zoom)
-- Menu contextuel complet
-
-### v0.4 — Intégration Linux
-- MPRIS via `zbus` (touches multimédia, contrôles du bureau)
-- Inhibition de la mise en veille (portail XDG)
-- Fichier `.desktop` et associations MIME
-- Raccourcis personnalisables et fichier de configuration (`serde` + `toml`)
-
-### v1.0 — Puissance
-- Shaders GLSL (upscaling, Anime4K…), égaliseur audio
-- Streaming réseau et YouTube via `yt-dlp`
-- Recherche de sous-titres en ligne (OpenSubtitles)
-- Système d'extensions (scripts Lua de mpv ou plugins maison)
-- Thèmes et skins en JSON
-- Distribution : Flatpak, AppImage, AUR
+- Miniatures dans la playlist
+- Publication sur Flathub et l'AUR (fichiers prêts dans `packaging/`)
+- Traductions de l'interface
 
 ---
 
@@ -346,9 +313,12 @@ Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propri�
 
 ## 8. Licences
 
-- libmpv : GPL v2+ (ou LGPL selon sa compilation)
+Lumen est un logiciel libre, distribué sous **GPL-3.0-or-later** (voir [LICENSE](LICENSE)).
+
+- libmpv : GPL v2+ (ou LGPL selon sa compilation) — compatible avec la GPL v3 de Lumen
 - Qt 6 : LGPL v3
 - CXX-Qt : MIT / Apache 2.0
+- Shaders AMD FidelityFX CAS et FSR : MIT (voir `assets/shaders/README.md`)
+- Icônes : tracés du jeu Lucide (ISC)
 
-Si tu distribues Lumen lié à une libmpv GPL, le projet doit être publié sous licence compatible GPL.
 N'utilise ni le nom, ni les icônes, ni les skins de PotPlayer.

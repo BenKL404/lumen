@@ -21,7 +21,9 @@ QQuickWindow *rootWindow(const QQmlApplicationEngine &engine)
 void lumen_init_app()
 {
     QGuiApplication::setApplicationName(QStringLiteral("Lumen"));
-    QGuiApplication::setDesktopFileName(QStringLiteral("lumen"));
+    // Sous Flatpak, l'identifiant d'application (et le nom du .desktop) est celui du paquet
+    const QString flatpakId = qEnvironmentVariable("FLATPAK_ID");
+    QGuiApplication::setDesktopFileName(flatpakId.isEmpty() ? QStringLiteral("lumen") : flatpakId);
 }
 
 void lumen_set_window_icon()

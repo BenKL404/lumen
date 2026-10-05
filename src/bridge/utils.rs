@@ -44,6 +44,21 @@ pub mod qobject {
             audio_bitrate: f64,
         ) -> QString;
 
+        /// Taille lisible : 1_468_006_400 -> "1,4 Go"
+        #[qinvokable]
+        #[cxx_name = "formatBytes"]
+        fn format_bytes(self: &Utils, bytes: f64) -> QString;
+
+        /// Débit lisible : 5_200_000 -> "5,2 Mb/s", 192_000 -> "192 kb/s"
+        #[qinvokable]
+        #[cxx_name = "formatBitrate"]
+        fn format_bitrate(self: &Utils, bits_per_second: f64) -> QString;
+
+        /// Nom usuel d'un codec à partir du nom FFmpeg : "h264" -> "H.264"
+        #[qinvokable]
+        #[cxx_name = "codecName"]
+        fn codec_name_qml(self: &Utils, codec: &QString) -> QString;
+
         /// Extrait un nom lisible depuis une URL : "file:///films/Mon%20Film.mkv" -> "Mon Film.mkv"
         #[qinvokable]
         #[cxx_name = "fileName"]
@@ -165,6 +180,18 @@ pub struct UtilsRust;
 impl qobject::Utils {
     pub fn format_time(&self, seconds: f64) -> QString {
         QString::from(&format_time(seconds))
+    }
+
+    pub fn format_bytes(&self, bytes: f64) -> QString {
+        QString::from(&format_bytes(bytes))
+    }
+
+    pub fn format_bitrate(&self, bits_per_second: f64) -> QString {
+        QString::from(&format_bitrate(bits_per_second))
+    }
+
+    pub fn codec_name_qml(&self, codec: &QString) -> QString {
+        QString::from(&codec_name(&codec.to_string()))
     }
 
     pub fn format_clock(&self, seconds: f64) -> QString {
@@ -357,6 +384,37 @@ pub fn file_extension(url: &str) -> String {
     match name.rsplit_once('.') {
         Some((stem, ext)) if !stem.is_empty() && ext.len() <= 5 => ext.to_ascii_uppercase(),
         _ => String::new(),
+    }
+}
+
+/// Nombre à une décimale avec la virgule française, sans « ,0 » inutile
+fn french_number(value: f64) -> String {
+    let text = format!("{value:.1}");
+    text.strip_suffix(".0").map(str::to_string).unwrap_or_else(|| text.replace('.', ","))
+}
+
+pub fn format_bytes(bytes: f64) -> String {
+    if !bytes.is_finite() || bytes <= 0.0 {
+        return String::new();
+    }
+    let units = ["o", "Ko", "Mo", "Go", "To"];
+    let mut value = bytes;
+    let mut unit = 0;
+    while value >= 1024.0 && unit + 1 < units.len() {
+        value /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 { format!("{value:.0} o") } else { format!("{} {}", french_number(value), units[unit]) }
+}
+
+pub fn format_bitrate(bits_per_second: f64) -> String {
+    if !bits_per_second.is_finite() || bits_per_second <= 0.0 {
+        return String::new();
+    }
+    if bits_per_second >= 1_000_000.0 {
+        format!("{} Mb/s", french_number(bits_per_second / 1_000_000.0))
+    } else {
+        format!("{:.0} kb/s", bits_per_second / 1000.0)
     }
 }
 
@@ -618,6 +676,18 @@ mod tests {
         assert_eq!(format_clock(3725.0), "01:02:05");
         assert_eq!(format_clock(-3.0), "00:00:00");
         assert_eq!(format_clock(f64::NAN), "00:00:00");
+    }
+
+    #[test]
+    fn formats_sizes_and_bitrates() {
+        assert_eq!(format_bytes(1_468_006_400.0), "1,4 Go");
+        assert_eq!(format_bytes(2048.0), "2 Ko");
+        assert_eq!(format_bytes(512.0), "512 o");
+        assert_eq!(format_bytes(0.0), "");
+        assert_eq!(format_bitrate(5_200_000.0), "5,2 Mb/s");
+        assert_eq!(format_bitrate(8_000_000.0), "8 Mb/s");
+        assert_eq!(format_bitrate(192_000.0), "192 kb/s");
+        assert_eq!(format_bitrate(f64::NAN), "");
     }
 
     #[test]

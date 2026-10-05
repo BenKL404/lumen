@@ -10,8 +10,9 @@ Window {
     // Taille de la dernière session (sans la playlist accolée, rouverte au besoin ensuite)
     width: settings.windowWidth
     height: settings.windowHeight
-    minimumWidth: 640
-    minimumHeight: 400
+    // Le mode mini autorise une fenêtre bien plus petite
+    minimumWidth: mini ? 240 : 640
+    minimumHeight: mini ? 135 : 400
     visible: true
     color: theme.background
     title: video.hasMedia ? video.mediaTitle + " — Lumen" : "Lumen"
@@ -20,25 +21,26 @@ Window {
 
     // Design tokens : palette du thème choisi (themes.rs : sombre, clair, OLED, skins JSON)
     // et couleur d'accent ; aucune couleur n'est écrite en dur dans l'interface
-    readonly property var palette: JSON.parse(utils.palette(settings.theme, settings.accent))
+    // (« themeColors » : Window a déjà une propriété « palette » dans les Qt récents)
+    readonly property var themeColors: JSON.parse(utils.palette(settings.theme, settings.accent))
     readonly property QtObject theme: QtObject {
-        readonly property color background: root.palette.background
-        readonly property color chrome: root.palette.chrome         // barres fixes
-        readonly property color menu: root.palette.menu             // menus et fenêtres
-        readonly property color surface: root.palette.surface       // éléments flottants
-        readonly property color surfaceHover: root.palette.surfaceHover
-        readonly property color border: root.palette.border
-        readonly property color text: root.palette.text
-        readonly property color muted: root.palette.muted
-        readonly property color track: root.palette.track
-        readonly property color subtle: root.palette.subtle         // fond discret des boutons
-        readonly property color raised: root.palette.raised         // séparateurs, sélection
-        readonly property color strong: root.palette.strong         // contours marqués
-        readonly property color field: root.palette.field           // champs de saisie
-        readonly property color shade: root.palette.shade
-        readonly property color divider: root.palette.divider
-        readonly property color accent: root.palette.accent
-        readonly property color onAccent: root.palette.onAccent     // texte sur l'accent
+        readonly property color background: root.themeColors.background
+        readonly property color chrome: root.themeColors.chrome         // barres fixes
+        readonly property color menu: root.themeColors.menu             // menus et fenêtres
+        readonly property color surface: root.themeColors.surface       // éléments flottants
+        readonly property color surfaceHover: root.themeColors.surfaceHover
+        readonly property color border: root.themeColors.border
+        readonly property color text: root.themeColors.text
+        readonly property color muted: root.themeColors.muted
+        readonly property color track: root.themeColors.track
+        readonly property color subtle: root.themeColors.subtle         // fond discret des boutons
+        readonly property color raised: root.themeColors.raised         // séparateurs, sélection
+        readonly property color strong: root.themeColors.strong         // contours marqués
+        readonly property color field: root.themeColors.field           // champs de saisie
+        readonly property color shade: root.themeColors.shade
+        readonly property color divider: root.themeColors.divider
+        readonly property color accent: root.themeColors.accent
+        readonly property color onAccent: root.themeColors.onAccent     // texte sur l'accent
         // Texte posé sur la vidéo (messages, titre en plein écran) : clair dans tous les thèmes
         readonly property color onVideo: "#ECE8E1"
         readonly property int radius: 14
@@ -53,9 +55,15 @@ Window {
     property bool pinned: false
     property bool wasMaximized: false
     readonly property bool fullscreen: visibility === Window.FullScreen
+    // Mode mini : petite fenêtre sans barre de titre ni contrôles fixes (taille d'avant mémorisée)
+    property bool mini: false
+    property var miniRestore: null
+    // Mise en page immersive (plein écran ou mode mini) : vidéo sur toute la fenêtre,
+    // contrôles et playlist flottants par-dessus l'image
+    readonly property bool immersive: fullscreen || mini
     // En fenêtré, la playlist est ancrée à droite et réduit la zone vidéo ;
     // en plein écran, elle glisse par-dessus l'image.
-    readonly property bool playlistDocked: playlistPanel.open && !fullscreen
+    readonly property bool playlistDocked: playlistPanel.open && !immersive
     // En fenêtré, la playlist est accolée au bord droit : la fenêtre s'élargit d'autant
     // et la vidéo garde sa taille. Fenêtre agrandie, elle prend place dans la fenêtre.
     property int attachedWidth: 0
@@ -84,6 +92,7 @@ Window {
         { label: "Lecture aléatoire", shortcut: root.keyLabel("aleatoire"), checked: playlist.shuffle, action: () => root.toggleShuffle() },
         { label: "Répéter : " + root.repeatNames[playlist.repeatMode], shortcut: root.keyLabel("repetition"), checked: playlist.repeatMode !== 0, action: () => root.cycleRepeat() },
         { label: "Plein écran", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
+        { label: "Mode mini", shortcut: root.keyLabel("mode_mini"), checked: root.mini, action: () => root.toggleMini() },
         { label: "Toujours au premier plan", checked: root.pinned, action: () => root.pinned = !root.pinned },
         { separator: true },
         { label: "Préférences…", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
@@ -105,6 +114,7 @@ Window {
         if (example !== "")
             settings.disabledExtensions = Array.from(settings.disabledExtensions).concat([example])
         utils.extensionPaths(settings.disabledExtensions).forEach(path => loadExtension(path))
+        lastVideoTimer.start()
         // Vidéos en ligne : yt-dlp récent et moteur JavaScript (voir utils.rs), 1080p au plus
         const ytdl = utils.ytdlPath()
         if (ytdl !== "")
@@ -133,8 +143,9 @@ Window {
         settings.maximized = fullscreen ? wasMaximized : visibility === Window.Maximized
         // La taille n'est connue qu'en fenêtré ; sans la largeur de la playlist accolée
         if (visibility === Window.Windowed) {
-            settings.windowWidth = width - attachedWidth
-            settings.windowHeight = height
+            // En mode mini, la taille à retenir est celle d'avant
+            settings.windowWidth = mini && miniRestore ? miniRestore.width : width - attachedWidth
+            settings.windowHeight = mini && miniRestore ? miniRestore.height : height
         }
         settings.save()
     }
@@ -240,7 +251,10 @@ Window {
             ]) },
             { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
                 { label: "Plein écran", icon: "maximize", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
+                { label: "Mode mini", icon: "minimize", shortcut: root.keyLabel("mode_mini"), checked: root.mini, action: () => root.toggleMini() },
                 { label: "Capture d'écran", icon: "camera", shortcut: root.keyLabel("capture"), action: () => root.screenshot() },
+                { label: "Informations sur le fichier", shortcut: root.keyLabel("informations"), checked: infoPanel.visible,
+                  action: () => infoPanel.visible = !infoPanel.visible },
                 { label: "Réglages d'image…", icon: "sun", shortcut: root.keyLabel("reglages_image"), action: () => root.toggleImagePanel() },
                 { separator: true },
                 aspectEntry("Format automatique", "-1"),
@@ -446,7 +460,7 @@ Window {
     function changeVolume(step) {
         const volume = Math.max(0, Math.min(130, video.volume + step))
         video.volume = volume
-        osd("Volume " + Math.round(volume) + " %")
+        osd("Volume " + Math.round(volume) + " %", 0, volume / 130)
     }
 
     function toggleMute() {
@@ -476,6 +490,69 @@ Window {
         } else {
             wasMaximized = visibility === Window.Maximized
             visibility = Window.FullScreen
+        }
+    }
+
+    // Proportions d'affichage de la vidéo (pixels non carrés compris), 0 si inconnues
+    function videoAspect() {
+        const w = video.getProperty("video-params/dw"), h = video.getProperty("video-params/dh")
+        return w && h ? w / h : 0
+    }
+
+    function toggleMini() {
+        if (mini) {
+            mini = false
+            if (miniRestore) {
+                width = miniRestore.width
+                height = miniRestore.height
+            }
+            return
+        }
+        if (fullscreen)
+            toggleFullScreen()
+        if (visibility === Window.Maximized)
+            visibility = Window.Windowed
+        closePopups()
+        setPlaylistOpen(false)
+        miniRestore = { width: width, height: height }
+        mini = true
+        const aspect = videoAspect() || 16 / 9
+        width = 480
+        height = Math.round(480 / aspect)
+    }
+
+    // Fenêtre aux proportions de la vidéo (une fois par fichier) : zone vidéo sans bandes
+    // noires, largeur conservée autant que possible, sans dépasser l'écran
+    property bool fitPending: false
+
+    function fitWindowToVideo() {
+        const aspect = videoAspect()
+        if (aspect <= 0 || visibility !== Window.Windowed)
+            return
+        if (mini) {
+            height = Math.round(width / aspect)
+            return
+        }
+        const chromeW = width - stage.width, chromeH = height - stage.height
+        let videoW = stage.width
+        let videoH = Math.round(videoW / aspect)
+        const maxH = Screen.desktopAvailableHeight * 0.9 - chromeH
+        if (videoH > maxH) {
+            videoH = Math.round(maxH)
+            videoW = Math.round(videoH * aspect)
+        }
+        width = Math.max(minimumWidth, videoW + chromeW)
+        height = Math.max(minimumHeight, videoH + chromeH)
+    }
+
+    Connections {
+        target: video
+        function onInfoChanged() {
+            if (root.fitPending && video.info["width"] > 0) {
+                root.fitPending = false
+                if (settings.fitWindowToVideo)
+                    Qt.callLater(root.fitWindowToVideo)
+            }
         }
     }
 
@@ -518,11 +595,13 @@ Window {
     }
 
     // Message à l'écran ; `duration` plus longue pour un avertissement
-    function osd(message, duration) {
+    // `gauge` : niveau de 0 à 1 affiché en jauge sous le message (volume) ; -1 : pas de jauge
+    function osd(message, duration, gauge) {
         // Messages désactivés dans les préférences : seuls les avertissements (durée donnée) restent
         if (!settings.showOsd && !duration)
             return
         osdText.text = message
+        osdGauge.level = gauge === undefined ? -1 : gauge
         osdBox.opacity = 1
         osdTimer.interval = duration || 1200
         osdTimer.restart()
@@ -731,7 +810,7 @@ Window {
         interval: 2500
         onTriggered: {
             if (video.hasMedia && !video.paused && !controls.hovered
-                    && !root.anyPopupOpen && !(root.fullscreen && playlistPanel.open))
+                    && !root.anyPopupOpen && !(root.immersive && playlistPanel.open))
                 root.controlsVisible = false
         }
     }
@@ -740,7 +819,7 @@ Window {
     TitleBar {
         id: titleBar
         anchors { left: parent.left; right: root.playlistAttached ? playlistPanel.left : parent.right; top: parent.top }
-        visible: !root.fullscreen
+        visible: !root.immersive
         window: root
         theme: root.theme
         format: !video.hasMedia ? "" : utils.isOnline(root.currentUrl) ? "WEB" : utils.fileExtension(root.currentUrl)
@@ -756,9 +835,9 @@ Window {
         id: stage
         anchors {
             left: parent.left
-            top: root.fullscreen ? parent.top : titleBar.bottom
+            top: root.immersive ? parent.top : titleBar.bottom
             right: root.playlistDocked ? playlistPanel.left : parent.right
-            bottom: root.fullscreen ? parent.bottom : controls.top
+            bottom: root.immersive ? parent.bottom : controls.top
         }
         clip: true
 
@@ -793,13 +872,16 @@ Window {
                     "loading failed": "échec du chargement",
                     "unrecognized file format": "format non reconnu",
                     "no audio or video data played": "ni image ni son",
-                    "nothing to play": "rien à lire"
+                    "nothing to play": "rien à lire",
+                    "audio output initialization failed": "sortie audio indisponible",
+                    "video output initialization failed": "sortie vidéo indisponible"
                 }
                 root.osd((utils.isOnline(root.pendingUrl) ? "Impossible de lire cette vidéo en ligne"
                                                           : "Impossible d'ouvrir ce fichier")
                          + " (" + (reasons[reason] || reason) + ")", 6000)
             }
             onFileLoaded: {
+                root.fitPending = true
                 if (utils.isOnline(root.pendingUrl))
                     Qt.callLater(() => root.osd(video.mediaTitle))
                 root.currentUrl = root.pendingUrl
@@ -821,9 +903,18 @@ Window {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: root.controlsVisible ? Qt.ArrowCursor : Qt.BlankCursor
 
-            onPositionChanged: root.wake()
+            property point pressPoint
+            onPositionChanged: (mouse) => {
+                root.wake()
+                // Mode mini (pas de barre de titre) : glisser la vidéo déplace la fenêtre
+                if (pressed && root.mini && Math.abs(mouse.x - pressPoint.x) + Math.abs(mouse.y - pressPoint.y) > 8) {
+                    clickTimer.clicks = 0
+                    root.startSystemMove()
+                }
+            }
             // Clic droit : menu. Clic gauche : compté (voir clickTimer)
             onPressed: (mouse) => {
+                pressPoint = Qt.point(mouse.x, mouse.y)
                 if (mouse.button === Qt.LeftButton) {
                     clickTimer.clicks += 1
                     clickTimer.restart()
@@ -876,23 +967,157 @@ Window {
             }
         }
 
+        // Démarrage sans fichier : proposer de reprendre la dernière vidéo
+        Rectangle {
+            id: lastVideoBox
+
+            property var last: null
+
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 40 }
+            visible: last !== null && !video.hasMedia && root.pendingUrl === ""
+            width: lastVideoRow.implicitWidth + 24
+            height: 48
+            radius: theme.radius
+            color: theme.surface
+            border.color: theme.border
+
+            MouseArea { anchors.fill: parent } // absorbe les clics
+
+            Row {
+                id: lastVideoRow
+                anchors.centerIn: parent
+                spacing: 12
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    leftPadding: 6
+                    text: lastVideoBox.last ? "Reprendre « " + utils.fileName(lastVideoBox.last.url) + " » à "
+                                              + utils.formatTime(lastVideoBox.last.position) : ""
+                    color: theme.text
+                    font.pixelSize: 14
+                    elide: Text.ElideMiddle
+                    width: Math.min(implicitWidth, stage.width - 220)
+                }
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: resumeLabel.implicitWidth + 24
+                    height: 32
+                    radius: 8
+                    color: resumeLastArea.containsMouse ? Qt.lighter(theme.accent, 1.1) : theme.accent
+                    Text {
+                        id: resumeLabel
+                        anchors.centerIn: parent
+                        text: "Reprendre"
+                        color: theme.onAccent
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+                    MouseArea {
+                        id: resumeLastArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            const url = lastVideoBox.last.url
+                            lastVideoBox.last = null
+                            root.openUrl(url)
+                        }
+                    }
+                }
+                IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    implicitHeight: 32
+                    theme: root.theme
+                    icon: "x"
+                    iconSize: 14
+                    onClicked: lastVideoBox.last = null
+                }
+            }
+        }
+
+        // Laisse le temps à un fichier passé en argument de s'ouvrir avant de proposer la reprise
+        Timer {
+            id: lastVideoTimer
+            interval: 600
+            onTriggered: {
+                if (video.hasMedia || root.pendingUrl !== "" || !settings.resumePlayback)
+                    return
+                const last = history.lastPlayed()
+                if (last !== "")
+                    lastVideoBox.last = JSON.parse(last)
+            }
+        }
+
+        // Informations sur le fichier (Tab), en surimpression sur la vidéo
+        InfoPanel {
+            id: infoPanel
+            anchors { top: parent.top; left: parent.left; margins: 20 }
+            visible: false
+            video: video
+            utils: utils
+            theme: root.theme
+            url: root.currentUrl
+        }
+
         // OSD : texte seul sur l'image, sans fond ; un fin contour sombre le garde
         // lisible sur les scènes claires
         Item {
             id: osdBox
             anchors { top: parent.top; right: parent.right; margins: 20 }
-            width: osdText.implicitWidth
-            height: osdText.implicitHeight
+            width: Math.max(osdText.implicitWidth, osdGauge.visible ? osdGauge.width : 0)
+            height: osdText.implicitHeight + (osdGauge.visible ? osdGauge.height + 8 : 0)
             opacity: 0
             Behavior on opacity { NumberAnimation { duration: theme.animation } }
 
             Text {
                 id: osdText
+                anchors.right: parent.right
                 color: theme.onVideo
                 font.pixelSize: 20
                 font.weight: Font.DemiBold
                 style: Text.Outline
                 styleColor: Qt.rgba(0, 0, 0, 0.75)
+            }
+
+            // Jauge (volume) : repère à 100 %, amplification au-delà dans une teinte plus vive
+            Item {
+                id: osdGauge
+
+                property real level: -1
+                readonly property real normal: 100 / 130
+
+                anchors { right: parent.right; top: osdText.bottom; topMargin: 8 }
+                visible: level >= 0
+                width: 180
+                height: 6
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 3
+                    color: Qt.rgba(0, 0, 0, 0.45)
+                    border.color: Qt.rgba(1, 1, 1, 0.25)
+                }
+                Rectangle {
+                    width: parent.width * Math.min(osdGauge.level, osdGauge.normal)
+                    height: parent.height
+                    radius: 3
+                    color: theme.onVideo
+                }
+                Rectangle {
+                    x: parent.width * osdGauge.normal
+                    width: parent.width * Math.max(0, osdGauge.level - osdGauge.normal)
+                    height: parent.height
+                    radius: 3
+                    color: theme.accent
+                }
+                Rectangle {
+                    x: parent.width * osdGauge.normal - 1
+                    y: -2
+                    width: 2
+                    height: parent.height + 4
+                    color: theme.onVideo
+                    opacity: 0.6
+                }
             }
             Timer {
                 id: osdTimer
@@ -995,8 +1220,9 @@ Window {
     // ------------------------------------------------- Barre de contrôle
     ControlBar {
         id: controls
-        floating: root.fullscreen
-        anchors { left: parent.left; right: stage.right; bottom: parent.bottom; margins: floating ? 20 : 0 }
+        floating: root.immersive
+        fullscreen: root.fullscreen
+        anchors { left: parent.left; right: stage.right; bottom: parent.bottom; margins: floating ? (root.mini ? 8 : 20) : 0 }
         video: video
         utils: utils
         theme: root.theme
@@ -1028,7 +1254,7 @@ Window {
     // Un clic en dehors d'un menu (ou de la playlist flottante) le ferme, sans mettre en pause
     MouseArea {
         anchors.fill: parent
-        enabled: root.anyPopupOpen || (root.fullscreen && playlistPanel.open)
+        enabled: root.anyPopupOpen || (root.immersive && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
     }
@@ -1036,12 +1262,12 @@ Window {
     // ------------------------------------------------------------- Playlist
     PlaylistPanel {
         id: playlistPanel
-        anchors { top: root.fullscreen || root.playlistAttached ? parent.top : titleBar.bottom; bottom: parent.bottom }
-        width: root.fullscreen ? Math.min(400, root.width * 0.4) : root.playlistWidth
+        anchors { top: root.immersive || root.playlistAttached ? parent.top : titleBar.bottom; bottom: parent.bottom }
+        width: root.immersive ? Math.min(400, root.width * 0.4) : root.playlistWidth
         x: open ? root.width - width : root.width
         visible: open || x < root.width
         Behavior on x {
-            enabled: root.fullscreen
+            enabled: root.immersive
             NumberAnimation { duration: theme.animation; easing.type: Easing.OutCubic }
         }
         playlist: playlist
@@ -1300,6 +1526,7 @@ Window {
         "decalage_audio_moins": () => shiftAudioDelay(-0.1),
         "decalage_audio_plus": () => shiftAudioDelay(0.1),
         "plein_ecran": () => toggleFullScreen(),
+        "mode_mini": () => toggleMini(),
         "ouvrir": () => fileDialog.open(),
         "ouvrir_dossier": () => folderDialog.open(),
         "ouvrir_url": () => openUrlPanel(),
@@ -1328,7 +1555,8 @@ Window {
         "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() },
         "raccourcis": () => toggleShortcutsPanel(),
         "chercher_sous_titres": () => openSubtitleSearch(),
-        "preferences": () => togglePreferences()
+        "preferences": () => togglePreferences(),
+        "informations": () => infoPanel.visible = !infoPanel.visible
     })
 
     Instantiator {
@@ -1434,6 +1662,8 @@ Window {
                 root.setPlaylistOpen(false)
             } else if (root.fullscreen) {
                 root.toggleFullScreen()
+            } else if (root.mini) {
+                root.toggleMini()
             }
         }
     }

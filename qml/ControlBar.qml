@@ -8,6 +8,7 @@ Rectangle {
     property var utils
     property var theme
     property bool floating: false
+    property bool fullscreen: false
     property bool hasPrevious: false
     property bool hasNext: false
     property int repeatMode: 0 // 0 désactivé, 1 le fichier, 2 la playlist
@@ -255,7 +256,7 @@ Rectangle {
                     onClicked: bar.repeatRequested()
                 }
                 IconButton { theme: bar.theme; icon: "list"; onClicked: bar.playlistRequested() }
-                IconButton { theme: bar.theme; icon: bar.floating ? "minimize" : "maximize"; onClicked: bar.fullscreenRequested() }
+                IconButton { theme: bar.theme; icon: bar.fullscreen ? "minimize" : "maximize"; onClicked: bar.fullscreenRequested() }
             }
         }
     }

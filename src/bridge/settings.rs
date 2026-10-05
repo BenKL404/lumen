@@ -42,6 +42,7 @@ pub mod qobject {
         #[qproperty(i32, seek_short)]
         #[qproperty(i32, seek_long)]
         #[qproperty(bool, hardware_decoding)]
+        #[qproperty(bool, fit_window_to_video)]
         #[qproperty(QString, audio_languages)]
         #[qproperty(QString, subtitle_languages)]
         #[qproperty(i32, subtitle_scale)]
@@ -140,6 +141,8 @@ pub struct SettingsFile {
     pub seek_long: i32,
     /// Décodage matériel (VA-API, NVDEC…) : moins de processeur et de batterie
     pub hardware_decoding: bool,
+    /// Adapter la fenêtre aux proportions de la vidéo à l'ouverture d'un fichier
+    pub fit_window_to_video: bool,
     /// Langues préférées, codes séparés par des virgules (« fr,en ») ; vide : celles du fichier
     pub audio_languages: String,
     pub subtitle_languages: String,
@@ -190,6 +193,7 @@ impl Default for SettingsFile {
             seek_short: 5,
             seek_long: 30,
             hardware_decoding: true,
+            fit_window_to_video: true,
             audio_languages: String::new(),
             subtitle_languages: String::new(),
             subtitle_scale: 100,
@@ -308,6 +312,7 @@ pub struct SettingsRust {
     seek_short: i32,
     seek_long: i32,
     hardware_decoding: bool,
+    fit_window_to_video: bool,
     audio_languages: QString,
     subtitle_languages: QString,
     subtitle_scale: i32,
@@ -355,6 +360,7 @@ impl From<SettingsFile> for SettingsRust {
             seek_short: f.seek_short,
             seek_long: f.seek_long,
             hardware_decoding: f.hardware_decoding,
+            fit_window_to_video: f.fit_window_to_video,
             audio_languages: QString::from(&f.audio_languages),
             subtitle_languages: QString::from(&f.subtitle_languages),
             subtitle_scale: f.subtitle_scale,
@@ -404,6 +410,7 @@ impl From<&SettingsRust> for SettingsFile {
             seek_short: s.seek_short,
             seek_long: s.seek_long,
             hardware_decoding: s.hardware_decoding,
+            fit_window_to_video: s.fit_window_to_video,
             audio_languages: s.audio_languages.to_string(),
             subtitle_languages: s.subtitle_languages.to_string(),
             subtitle_scale: s.subtitle_scale,
@@ -515,6 +522,7 @@ mod tests {
             seek_short: 10,
             seek_long: 60,
             hardware_decoding: false,
+            fit_window_to_video: false,
             audio_languages: "fr,en".into(),
             subtitle_languages: "fr".into(),
             subtitle_scale: 120,

@@ -80,6 +80,8 @@ Rectangle {
 
             { cat: "video", label: "Décodage matériel", desc: "Moins de processeur et de batterie (VA-API, NVDEC…)",
               type: "toggle", get: () => s.hardwareDecoding, set: (v) => s.hardwareDecoding = v },
+            { cat: "video", label: "Adapter la fenêtre à la vidéo", desc: "À l'ouverture d'un fichier : proportions de l'image, sans bandes noires",
+              type: "toggle", get: () => s.fitWindowToVideo, set: (v) => s.fitWindowToVideo = v },
             { cat: "video", label: "Agrandissement", desc: "Vidéos plus petites que l'écran (DVD, 720p…)", type: "choice",
               options: [{ label: "Standard", value: 0 }, { label: "Haute qualité", value: 1 }, { label: "FSR (AMD)", value: 2 }],
               get: () => s.upscaler, set: (v) => s.upscaler = v },

@@ -76,6 +76,9 @@ public:
     Q_INVOKABLE void screenshot();
     // Accès générique à toute commande mpv : command(["cycle", "sub"])
     Q_INVOKABLE void command(const QStringList &args);
+    // Lecture ponctuelle de n'importe quelle propriété mpv (panneau d'informations…) ;
+    // valeur invalide si elle n'est pas disponible
+    Q_INVOKABLE QVariant getProperty(const QString &name) const;
 
 signals:
     void positionChanged();

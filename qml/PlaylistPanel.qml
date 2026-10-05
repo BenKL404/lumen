@@ -15,6 +15,8 @@ Rectangle {
     // Accolée à la fenêtre : a sa propre barre de titre, qui sert aussi à déplacer la fenêtre
     property bool attached: false
     property int selected: -1
+    // Glisser-déposer : ligne d'insertion (index d'arrivée), -1 hors glissement
+    property int dropIndex: -1
     property string filter: ""
 
     readonly property int count: playlist.items.length
@@ -134,6 +136,21 @@ Rectangle {
         clip: true
         model: panel.playlist.items
         boundsBehavior: Flickable.StopAtBounds
+        // Pas de défilement par glissement : le glisser sert à réorganiser
+        interactive: panel.dropIndex < 0
+
+        // Ligne d'insertion pendant le glisser-déposer
+        Rectangle {
+            parent: list.contentItem
+            visible: panel.dropIndex >= 0
+            x: 6
+            y: panel.dropIndex * 30 + (panel.dropIndex > panel.selected ? 29 : -1)
+            width: list.width - 12
+            height: 2
+            radius: 1
+            color: panel.theme.accent
+            z: 10
+        }
 
         delegate: Rectangle {
             id: row
@@ -185,9 +202,38 @@ Rectangle {
             }
             MouseArea {
                 id: rowArea
+
+                property real pressY: 0
+                property bool dragging: false
+
+                // Position d'arrivée sous la souris (lignes de 30 px, pas de filtre actif)
+                function targetIndex(mouseY) {
+                    const y = mapToItem(list.contentItem, 0, mouseY).y
+                    return Math.max(0, Math.min(panel.count - 1, Math.floor(y / 30)))
+                }
+
                 anchors.fill: parent
                 hoverEnabled: true
-                onClicked: panel.selected = row.index
+                cursorShape: dragging ? Qt.ClosedHandCursor : Qt.ArrowCursor
+                onPressed: (mouse) => { pressY = mouse.y; dragging = false }
+                onPositionChanged: (mouse) => {
+                    // Réorganiser : seulement sans recherche (des lignes seraient masquées)
+                    if (!pressed || panel.filter !== "")
+                        return
+                    if (!dragging && Math.abs(mouse.y - pressY) > 6)
+                        dragging = true
+                    if (dragging)
+                        panel.dropIndex = targetIndex(mouse.y)
+                }
+                onReleased: {
+                    if (dragging && panel.dropIndex >= 0 && panel.dropIndex !== row.index) {
+                        panel.playlist.moveItem(row.index, panel.dropIndex)
+                        panel.selected = panel.dropIndex
+                    }
+                    dragging = false
+                    panel.dropIndex = -1
+                }
+                onClicked: if (!dragging) panel.selected = row.index
                 onDoubleClicked: panel.activated(row.index)
             }
         }
