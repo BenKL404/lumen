@@ -1,10 +1,17 @@
 //! Lumen — lecteur vidéo pour Linux (Rust + CXX-Qt + QML + libmpv)
 
 mod bridge;
+mod single_instance;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 
 fn main() {
+    // Lumen déjà ouvert : lui confier le fichier et s'arrêter (option single_instance)
+    let argument = std::env::args().nth(1);
+    if single_instance::forward_to_running_instance(argument.as_deref()) {
+        return;
+    }
+
     use_desktop_portal();
 
     // Doit être appelé avant la création de la fenêtre :
@@ -33,8 +40,8 @@ fn main() {
 
     if let Some(engine) = engine.as_ref() {
         // `lumen fichier.mkv` : ouvre le fichier au démarrage
-        if let Some(file) = std::env::args().nth(1) {
-            bridge::app::ffi::lumen_open_file(engine, &QString::from(&file));
+        if let Some(file) = &argument {
+            bridge::app::ffi::lumen_open_file(engine, &QString::from(file));
         }
         // Outil de développement : LUMEN_SNAPSHOT=capture.png enregistre la fenêtre puis quitte
         if let Some(path) = std::env::var_os("LUMEN_SNAPSHOT") {

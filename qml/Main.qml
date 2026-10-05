@@ -74,6 +74,8 @@ Window {
           action: () => root.toggleSetting("resumePlayback", "Reprise de la lecture") },
         { label: "Playlist automatique des épisodes", checked: settings.autoPlaylist,
           action: () => root.toggleSetting("autoPlaylist", "Playlist automatique") },
+        { label: "Une seule fenêtre Lumen", checked: settings.singleInstance,
+          action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
         { label: "Effacer l'historique de lecture", icon: "trash", action: () => { history.clear(); root.osd("Historique de lecture effacé") } },
         { separator: true },
         { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
@@ -586,7 +588,12 @@ Window {
         case "rate": setSpeed(Math.max(0.25, Math.min(4, number))); break
         case "repeat": playlist.setRepeat(number); break
         case "shuffle": playlist.setShuffleEnabled(number > 0); break
-        case "raise": raise(); requestActivate(); break
+        case "raise":
+            if (visibility === Window.Minimized)
+                showNormal()
+            raise()
+            requestActivate()
+            break
         case "quit": close(); break
         case "open": openUrl(text); break
         }
