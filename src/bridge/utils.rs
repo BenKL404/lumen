@@ -5,6 +5,10 @@ pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qlist.h");
+        type QList_i32 = cxx_qt_lib::QList<i32>;
+        include!("cxx-qt-lib/qstringlist.h");
+        type QStringList = cxx_qt_lib::QStringList;
     }
 
     extern "RustQt" {
@@ -55,6 +59,21 @@ pub mod qobject {
         #[cxx_name = "thumbnailUrl"]
         fn thumbnail_url(self: &Utils, url: &QString, seconds: f64) -> QString;
 
+        /// Valeur de la propriété `af` de mpv pour l'égaliseur et la normalisation (voir audio.rs)
+        #[qinvokable]
+        #[cxx_name = "audioFilters"]
+        fn audio_filters(self: &Utils, gains: &QList_i32, normalize: bool) -> QString;
+
+        /// Noms des préréglages de l'égaliseur
+        #[qinvokable]
+        #[cxx_name = "equalizerPresets"]
+        fn equalizer_presets(self: &Utils) -> QStringList;
+
+        /// Gains d'un préréglage
+        #[qinvokable]
+        #[cxx_name = "equalizerPreset"]
+        fn equalizer_preset(self: &Utils, name: &QString) -> QList_i32;
+
         /// yt-dlp à utiliser pour les vidéos en ligne (vide : celui du PATH)
         #[qinvokable]
         #[cxx_name = "ytdlPath"]
@@ -94,7 +113,7 @@ pub mod qobject {
     }
 }
 
-use cxx_qt_lib::QString;
+use cxx_qt_lib::{QList, QString, QStringList};
 
 #[derive(Default)]
 pub struct UtilsRust;
@@ -141,6 +160,30 @@ impl qobject::Utils {
 
     pub fn thumbnail_url(&self, url: &QString, seconds: f64) -> QString {
         QString::from(&thumbnail_url(&url.to_string(), seconds))
+    }
+
+    pub fn audio_filters(&self, gains: &QList<i32>, normalize: bool) -> QString {
+        let gains: Vec<i32> = gains.iter().copied().collect();
+        QString::from(&super::audio::filter_chain(&gains, normalize))
+    }
+
+    pub fn equalizer_presets(&self) -> QStringList {
+        let mut list = QList::<QString>::default();
+        for (name, _) in super::audio::PRESETS {
+            list.append(QString::from(*name));
+        }
+        QStringList::from(&list)
+    }
+
+    pub fn equalizer_preset(&self, name: &QString) -> QList<i32> {
+        let name = name.to_string();
+        let mut list = QList::<i32>::default();
+        if let Some((_, gains)) = super::audio::PRESETS.iter().find(|(n, _)| *n == name) {
+            for gain in gains {
+                list.append(*gain);
+            }
+        }
+        list
     }
 
     pub fn ytdl_path(&self) -> QString {

@@ -8,6 +8,8 @@ pub mod qobject {
         type QString = cxx_qt_lib::QString;
         include!("cxx-qt-lib/qstringlist.h");
         type QStringList = cxx_qt_lib::QStringList;
+        include!("cxx-qt-lib/qlist.h");
+        type QList_i32 = cxx_qt_lib::QList<i32>;
     }
 
     #[auto_cxx_name]
@@ -32,6 +34,9 @@ pub mod qobject {
         #[qproperty(i32, gamma)]
         #[qproperty(i32, hue)]
         #[qproperty(i32, zoom)]
+        // Égaliseur (10 gains en dB) et normalisation du volume
+        #[qproperty(QList_i32, equalizer)]
+        #[qproperty(bool, normalize_volume)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -104,6 +109,10 @@ pub struct SettingsFile {
     pub hue: i32,
     /// Zoom de l'image en % (100 : taille normale)
     pub zoom: i32,
+    /// Égaliseur : gain des 10 bandes en dB, de -12 à 12 (voir audio.rs)
+    pub equalizer: Vec<i32>,
+    /// Normalisation dynamique du volume (dialogues plus audibles, explosions retenues)
+    pub normalize_volume: bool,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -129,6 +138,8 @@ impl Default for SettingsFile {
             gamma: 0,
             hue: 0,
             zoom: 100,
+            equalizer: vec![0; 10],
+            normalize_volume: false,
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -149,6 +160,7 @@ impl SettingsFile {
             *value = (*value).clamp(-100, 100);
         }
         self.zoom = self.zoom.clamp(25, 400);
+        self.equalizer = super::audio::sanitized(&self.equalizer);
         // Liste complète dans le fichier : toutes les actions sont visibles et modifiables
         self.shortcuts = shortcuts::merged(&self.shortcuts);
         self
@@ -207,6 +219,8 @@ pub struct SettingsRust {
     gamma: i32,
     hue: i32,
     zoom: i32,
+    equalizer: QList<i32>,
+    normalize_volume: bool,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -232,6 +246,14 @@ impl From<SettingsFile> for SettingsRust {
             gamma: f.gamma,
             hue: f.hue,
             zoom: f.zoom,
+            equalizer: {
+                let mut list = QList::<i32>::default();
+                for gain in &f.equalizer {
+                    list.append(*gain);
+                }
+                list
+            },
+            normalize_volume: f.normalize_volume,
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -259,6 +281,8 @@ impl From<&SettingsRust> for SettingsFile {
             gamma: s.gamma,
             hue: s.hue,
             zoom: s.zoom,
+            equalizer: s.equalizer.iter().copied().collect(),
+            normalize_volume: s.normalize_volume,
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -354,6 +378,8 @@ mod tests {
             gamma: 0,
             hue: -3,
             zoom: 150,
+            equalizer: vec![3, 2, 0, 0, 0, 0, 0, 0, -1, -2],
+            normalize_volume: true,
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier

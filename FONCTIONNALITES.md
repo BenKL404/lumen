@@ -124,6 +124,9 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | I | Réglages d'image (luminosité, contraste, saturation, gamma, teinte, zoom) |
 | F1 | Liste des raccourcis (modifiables dans settings.toml) |
 | Ctrl + U | Ouvrir une vidéo en ligne (YouTube…) |
+| E | Son : égaliseur, normalisation, décalage audio |
+| N | Normaliser le volume (dialogues / explosions) |
+| Maj + Z / Maj + X | Décaler le son de −0,1 s / +0,1 s |
 | Ctrl + V | Coller un lien vidéo |
 | R / H | Répétition / lecture aléatoire |
 | Ctrl + O | Ouvrir un dossier |
