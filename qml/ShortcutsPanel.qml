@@ -194,8 +194,8 @@ Rectangle {
             anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
             spacing: 8
 
-            FooterButton { theme: panel.theme; icon: "settings"; label: "Modifier…"; onClicked: panel.editRequested() }
-            FooterButton { theme: panel.theme; icon: "rotate-cw"; label: "Recharger"; onClicked: panel.reloadRequested() }
+            FooterButton { theme: panel.theme; icon: "pencil"; label: "Modifier…"; onClicked: panel.editRequested() }
+            FooterButton { theme: panel.theme; icon: "refresh"; label: "Recharger"; onClicked: panel.reloadRequested() }
         }
     }
 }

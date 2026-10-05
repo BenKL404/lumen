@@ -245,7 +245,7 @@ Rectangle {
                     onClicked: bar.video.speed = bar.video.speed >= 2 ? 1.0 : bar.video.speed + 0.25
                 }
                 IconButton { theme: bar.theme; icon: "camera"; visible: bar.compact < 1; enabled: bar.video.hasMedia; onClicked: bar.video.screenshot() }
-                IconButton { theme: bar.theme; icon: "sliders"; visible: bar.compact < 3; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
+                IconButton { theme: bar.theme; icon: "sun"; visible: bar.compact < 3; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
                 IconButton { theme: bar.theme; icon: "shuffle"; visible: bar.compact < 2; active: bar.shuffle; onClicked: bar.shuffleRequested() }
                 IconButton {
                     theme: bar.theme

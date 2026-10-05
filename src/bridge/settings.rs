@@ -37,6 +37,14 @@ pub mod qobject {
         // Égaliseur (10 gains en dB) et normalisation du volume
         #[qproperty(QList_i32, equalizer)]
         #[qproperty(bool, normalize_volume)]
+        // Préférences (fenêtre F5)
+        #[qproperty(bool, show_osd)]
+        #[qproperty(i32, seek_short)]
+        #[qproperty(i32, seek_long)]
+        #[qproperty(bool, hardware_decoding)]
+        #[qproperty(QString, audio_languages)]
+        #[qproperty(QString, subtitle_languages)]
+        #[qproperty(i32, subtitle_scale)]
         // Change à chaque rechargement des raccourcis : les liaisons QML les relisent
         #[qproperty(i32, shortcuts_version, READ, NOTIFY)]
         type Settings = super::SettingsRust;
@@ -113,6 +121,18 @@ pub struct SettingsFile {
     pub equalizer: Vec<i32>,
     /// Normalisation dynamique du volume (dialogues plus audibles, explosions retenues)
     pub normalize_volume: bool,
+    /// Messages d'action à l'écran (volume, saut, vitesse…)
+    pub show_osd: bool,
+    /// Durée des sauts, en secondes : flèches, et Ctrl+flèches
+    pub seek_short: i32,
+    pub seek_long: i32,
+    /// Décodage matériel (VA-API, NVDEC…) : moins de processeur et de batterie
+    pub hardware_decoding: bool,
+    /// Langues préférées, codes séparés par des virgules (« fr,en ») ; vide : celles du fichier
+    pub audio_languages: String,
+    pub subtitle_languages: String,
+    /// Taille des sous-titres en % (100 : taille normale)
+    pub subtitle_scale: i32,
     /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
     #[serde(rename = "raccourcis")]
     pub shortcuts: BTreeMap<String, Keys>,
@@ -140,6 +160,13 @@ impl Default for SettingsFile {
             zoom: 100,
             equalizer: vec![0; 10],
             normalize_volume: false,
+            show_osd: true,
+            seek_short: 5,
+            seek_long: 30,
+            hardware_decoding: true,
+            audio_languages: String::new(),
+            subtitle_languages: String::new(),
+            subtitle_scale: 100,
             shortcuts: shortcuts::defaults(),
         }
     }
@@ -161,6 +188,11 @@ impl SettingsFile {
         }
         self.zoom = self.zoom.clamp(25, 400);
         self.equalizer = super::audio::sanitized(&self.equalizer);
+        self.seek_short = self.seek_short.clamp(1, 60);
+        self.seek_long = self.seek_long.clamp(5, 600);
+        self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
+        self.audio_languages = language_list(&self.audio_languages);
+        self.subtitle_languages = language_list(&self.subtitle_languages);
         // Liste complète dans le fichier : toutes les actions sont visibles et modifiables
         self.shortcuts = shortcuts::merged(&self.shortcuts);
         self
@@ -192,6 +224,15 @@ impl SettingsFile {
     }
 }
 
+/// Liste de langues propre : « FR, en ,, » -> « fr,en » (format attendu par mpv)
+pub fn language_list(text: &str) -> String {
+    text.split([',', ' ', ';'])
+        .map(|code| code.trim().to_lowercase())
+        .filter(|code| !code.is_empty() && code.chars().all(|c| c.is_ascii_alphabetic() || c == '-'))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 pub fn settings_path() -> PathBuf {
     let config = std::env::var_os("XDG_CONFIG_HOME")
         .filter(|v| !v.is_empty())
@@ -221,6 +262,13 @@ pub struct SettingsRust {
     zoom: i32,
     equalizer: QList<i32>,
     normalize_volume: bool,
+    show_osd: bool,
+    seek_short: i32,
+    seek_long: i32,
+    hardware_decoding: bool,
+    audio_languages: QString,
+    subtitle_languages: QString,
+    subtitle_scale: i32,
     shortcuts: BTreeMap<String, Keys>,
     resolved_shortcuts: Resolved,
     shortcuts_version: i32,
@@ -254,6 +302,13 @@ impl From<SettingsFile> for SettingsRust {
                 list
             },
             normalize_volume: f.normalize_volume,
+            show_osd: f.show_osd,
+            seek_short: f.seek_short,
+            seek_long: f.seek_long,
+            hardware_decoding: f.hardware_decoding,
+            audio_languages: QString::from(&f.audio_languages),
+            subtitle_languages: QString::from(&f.subtitle_languages),
+            subtitle_scale: f.subtitle_scale,
             resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
             shortcuts: f.shortcuts,
             shortcuts_version: 0,
@@ -283,6 +338,13 @@ impl From<&SettingsRust> for SettingsFile {
             zoom: s.zoom,
             equalizer: s.equalizer.iter().copied().collect(),
             normalize_volume: s.normalize_volume,
+            show_osd: s.show_osd,
+            seek_short: s.seek_short,
+            seek_long: s.seek_long,
+            hardware_decoding: s.hardware_decoding,
+            audio_languages: s.audio_languages.to_string(),
+            subtitle_languages: s.subtitle_languages.to_string(),
+            subtitle_scale: s.subtitle_scale,
             shortcuts: s.shortcuts.clone(),
         }
     }
@@ -380,12 +442,27 @@ mod tests {
             zoom: 150,
             equalizer: vec![3, 2, 0, 0, 0, 0, 0, 0, -1, -2],
             normalize_volume: true,
+            show_osd: false,
+            seek_short: 10,
+            seek_long: 60,
+            hardware_decoding: false,
+            audio_languages: "fr,en".into(),
+            subtitle_languages: "fr".into(),
+            subtitle_scale: 120,
             shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier
         assert_eq!(SettingsFile::load(&path), settings);
         assert!(!path.with_extension("toml.tmp").exists());
         std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn cleans_language_lists() {
+        assert_eq!(language_list("FR, en ,, "), "fr,en");
+        assert_eq!(language_list("fre;eng jpn"), "fre,eng,jpn");
+        assert_eq!(language_list("pt-BR, <script>"), "pt-br");
+        assert_eq!(language_list(""), "");
     }
 
     #[test]
@@ -405,6 +482,8 @@ mod tests {
         assert_eq!(loaded.window_width, 640);
         assert!(loaded.shuffle);
         assert_eq!((loaded.brightness, loaded.zoom), (100, 25));
+        assert!(loaded.show_osd && loaded.hardware_decoding);
+        assert_eq!((loaded.seek_short, loaded.seek_long, loaded.subtitle_scale), (5, 30, 100));
         assert!(loaded.resume_playback && loaded.auto_playlist);
 
         // Fichier illisible : paramètres par défaut, sans planter

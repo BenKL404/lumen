@@ -37,7 +37,7 @@ Window {
     property bool controlsVisible: true
     // Un menu ou un panneau est ouvert : les contrôles restent visibles, Échap et un clic à côté le ferment
     readonly property bool anyPopupOpen: trackMenu.visible || imagePanel.visible || audioPanel.visible
-        || shortcutsPanel.visible || urlPanel.visible || appMenu.visible || contextMenu.visible
+        || shortcutsPanel.visible || urlPanel.visible || preferencesPanel.visible || appMenu.visible || contextMenu.visible
     property bool pinned: false
     property bool wasMaximized: false
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -80,7 +80,8 @@ Window {
           action: () => root.toggleSetting("autoPlaylist", "Playlist automatique") },
         { label: "Une seule fenêtre Lumen", checked: settings.singleInstance,
           action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
-        { label: "Raccourcis clavier…", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
+        { label: "Préférences…", icon: "settings", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
+        { label: "Raccourcis clavier…", icon: "keyboard", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
         { label: "Effacer l'historique de lecture", icon: "trash", action: () => { history.clear(); root.osd("Historique de lecture effacé") } },
         { separator: true },
         { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
@@ -99,6 +100,7 @@ Window {
         imageKeys.forEach(k => image[k] = settings[k])
         sound.equalizer = Array.from(settings.equalizer)
         sound.normalize = settings.normalizeVolume
+        applyPlaybackSettings()
         // Vidéos en ligne : yt-dlp récent et moteur JavaScript (voir utils.rs), 1080p au plus
         const ytdl = utils.ytdlPath()
         if (ytdl !== "")
@@ -155,7 +157,7 @@ Window {
         return [
             { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
             { label: "Ouvrir un dossier…", icon: "folder", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
-            { label: "Ouvrir une vidéo en ligne…", icon: "monitor", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
+            { label: "Ouvrir une vidéo en ligne…", icon: "globe", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
             { label: "Ajouter à la playlist…", action: () => addDialog.open() },
             { separator: true },
             { label: "Lecture", icon: "play", enabled: has, submenu: [
@@ -165,21 +167,21 @@ Window {
                 { label: "Précédent", icon: "skip-back", shortcut: root.keyLabel("fichier_precedent"), enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
                 { label: "Suivant", icon: "skip-forward", shortcut: root.keyLabel("fichier_suivant"), enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
                 { separator: true },
-                { label: root.abLoopLabel(), icon: "repeat", shortcut: root.keyLabel("boucle_ab"), checked: video.abLoopB >= 0, action: () => root.cycleAbLoop() },
+                { label: root.abLoopLabel(), icon: "arrow-left-right", shortcut: root.keyLabel("boucle_ab"), checked: video.abLoopB >= 0, action: () => root.cycleAbLoop() },
                 { separator: true },
                 { label: "Lecture aléatoire", icon: "shuffle", shortcut: root.keyLabel("aleatoire"), checked: playlist.shuffle, action: () => root.toggleShuffle() },
                 { label: "Ne pas répéter", checked: playlist.repeatMode === 0, action: () => root.setRepeat(0) },
                 { label: "Répéter le fichier", checked: playlist.repeatMode === 1, action: () => root.setRepeat(1) },
                 { label: "Répéter la playlist", checked: playlist.repeatMode === 2, action: () => root.setRepeat(2) },
                 { separator: true },
-                { label: "Reculer de 5 s", shortcut: root.keyLabel("reculer"), action: () => root.seekBy(-5) },
-                { label: "Avancer de 5 s", shortcut: root.keyLabel("avancer"), action: () => root.seekBy(5) },
-                { label: "Reculer de 30 s", shortcut: root.keyLabel("reculer_30s"), action: () => root.seekBy(-30) },
-                { label: "Avancer de 30 s", shortcut: root.keyLabel("avancer_30s"), action: () => root.seekBy(30) },
+                { label: "Reculer de " + settings.seekShort + " s", shortcut: root.keyLabel("reculer"), action: () => root.seekBy(-settings.seekShort) },
+                { label: "Avancer de " + settings.seekShort + " s", shortcut: root.keyLabel("avancer"), action: () => root.seekBy(settings.seekShort) },
+                { label: "Reculer de " + settings.seekLong + " s", shortcut: root.keyLabel("reculer_30s"), action: () => root.seekBy(-settings.seekLong) },
+                { label: "Avancer de " + settings.seekLong + " s", shortcut: root.keyLabel("avancer_30s"), action: () => root.seekBy(settings.seekLong) },
                 { label: "Image précédente", shortcut: root.keyLabel("image_precedente"), action: () => video.frameStep(false) },
                 { label: "Image suivante", shortcut: root.keyLabel("image_suivante"), action: () => video.frameStep(true) }
             ] },
-            { label: "Chapitres", icon: "list", enabled: has && video.chapters.length > 0, submenu:
+            { label: "Chapitres", icon: "list-ordered", enabled: has && video.chapters.length > 0, submenu:
                 video.chapters.map((c, i) => ({
                     label: (i + 1) + ". " + (c.title || "Chapitre " + (i + 1)),
                     // Arrondi : les débuts de chapitre MKV tombent souvent juste avant la seconde
@@ -192,7 +194,7 @@ Window {
                     { label: "Chapitre suivant", shortcut: root.keyLabel("chapitre_suivant"), action: () => root.stepChapter(1) }
                 ])
             },
-            { label: "Signets", icon: "pin", enabled: has, submenu:
+            { label: "Signets", icon: "bookmark", enabled: has, submenu:
                 [{ label: "Ajouter un signet ici", icon: "plus", shortcut: root.keyLabel("signet"), action: () => root.addBookmark() }]
                 .concat(root.bookmarks.length > 0 ? [{ separator: true }] : [],
                         root.bookmarks.map((t, i) => ({
@@ -216,7 +218,7 @@ Window {
                                         : [{ label: "Aucune piste audio", enabled: false }]).concat([
                 { separator: true },
                 { label: "Normaliser le volume", shortcut: root.keyLabel("normaliser"), checked: root.sound.normalize, action: () => root.toggleNormalize() },
-                { label: "Égaliseur et son…", icon: "sliders", shortcut: root.keyLabel("son"), action: () => root.toggleAudioPanel() },
+                { label: "Égaliseur et son…", icon: "sliders-vertical", shortcut: root.keyLabel("son"), action: () => root.toggleAudioPanel() },
                 { separator: true },
                 { label: "Muet", shortcut: root.keyLabel("muet"), checked: video.muted, action: () => root.toggleMute() },
                 { label: "Augmenter le volume", shortcut: root.keyLabel("volume_plus"), action: () => root.changeVolume(5) },
@@ -234,7 +236,7 @@ Window {
             { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
                 { label: "Plein écran", icon: "maximize", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
                 { label: "Capture d'écran", icon: "camera", shortcut: root.keyLabel("capture"), action: () => root.screenshot() },
-                { label: "Réglages d'image…", icon: "settings", shortcut: root.keyLabel("reglages_image"), action: () => root.toggleImagePanel() },
+                { label: "Réglages d'image…", icon: "sun", shortcut: root.keyLabel("reglages_image"), action: () => root.toggleImagePanel() },
                 { separator: true },
                 aspectEntry("Format automatique", "-1"),
                 aspectEntry("16:9", "16:9"),
@@ -246,6 +248,7 @@ Window {
             { separator: true },
             { label: "Playlist", icon: "list", shortcut: root.keyLabel("playlist"), checked: playlistPanel.open, action: () => root.togglePlaylist() },
             { label: "Toujours au premier plan", icon: "pin", checked: root.pinned, action: () => root.pinned = !root.pinned },
+            { label: "Préférences…", icon: "settings", shortcut: root.keyLabel("preferences"), action: () => root.togglePreferences() },
             { separator: true },
             { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
         ]
@@ -484,6 +487,7 @@ Window {
     }
 
     function closePopups() {
+        preferencesPanel.visible = false
         audioPanel.visible = false
         urlPanel.visible = false
         shortcutsPanel.visible = false
@@ -497,6 +501,9 @@ Window {
 
     // Message à l'écran ; `duration` plus longue pour un avertissement
     function osd(message, duration) {
+        // Messages désactivés dans les préférences : seuls les avertissements (durée donnée) restent
+        if (!settings.showOsd && !duration)
+            return
         osdText.text = message
         osdBox.opacity = 1
         osdTimer.interval = duration || 1200
@@ -1093,6 +1100,31 @@ Window {
         onCloseRequested: visible = false
     }
 
+    // Préférences : fenêtre au centre, sur un voile qui assombrit le reste
+    Rectangle {
+        anchors.fill: parent
+        visible: preferencesPanel.visible
+        color: Qt.rgba(0, 0, 0, 0.45)
+        MouseArea { anchors.fill: parent; onClicked: preferencesPanel.visible = false }
+    }
+    PreferencesPanel {
+        id: preferencesPanel
+        anchors.centerIn: parent
+        width: Math.min(820, parent.width - 40)
+        height: Math.min(560, parent.height - 40)
+        visible: false
+        app: root
+        theme: root.theme
+        settings: settings
+        playlist: playlist
+        image: root.image
+        sound: root.sound
+        history: history
+        utils: utils
+        onCloseRequested: visible = false
+        onChanged: root.saveSettings()
+    }
+
     // Lecture du presse-papiers (pas d'accès direct en QML)
     TextInput { id: clipboardReader; visible: false }
 
@@ -1197,10 +1229,10 @@ Window {
     // ici, seulement ce que fait chaque action.
     readonly property var keyActions: ({
         "lecture_pause": () => video.togglePause(),
-        "reculer": () => seekBy(-5),
-        "avancer": () => seekBy(5),
-        "reculer_30s": () => seekBy(-30),
-        "avancer_30s": () => seekBy(30),
+        "reculer": () => seekBy(-settings.seekShort),
+        "avancer": () => seekBy(settings.seekShort),
+        "reculer_30s": () => seekBy(-settings.seekLong),
+        "avancer_30s": () => seekBy(settings.seekLong),
         "volume_plus": () => changeVolume(5),
         "volume_moins": () => changeVolume(-5),
         "muet": () => toggleMute(),
@@ -1235,7 +1267,8 @@ Window {
         "signet": () => addBookmark(),
         "reglages_image": () => toggleImagePanel(),
         "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() },
-        "raccourcis": () => toggleShortcutsPanel()
+        "raccourcis": () => toggleShortcutsPanel(),
+        "preferences": () => togglePreferences()
     })
 
     Instantiator {
@@ -1274,6 +1307,28 @@ Window {
             openUrl(text)
         else
             openUrlPanel(text)
+    }
+
+    function togglePreferences() {
+        const show = !preferencesPanel.visible
+        closePopups()
+        preferencesPanel.visible = show
+    }
+
+    // Préférences appliquées à mpv : au démarrage, puis à chaque changement
+    function applyPlaybackSettings() {
+        video.command(["set", "hwdec", settings.hardwareDecoding ? "auto-safe" : "no"])
+        video.command(["set", "alang", settings.audioLanguages])
+        video.command(["set", "slang", settings.subtitleLanguages])
+        video.command(["set", "sub-scale", String(settings.subtitleScale / 100)])
+    }
+
+    Connections {
+        target: settings
+        function onHardwareDecodingChanged() { root.applyPlaybackSettings() }
+        function onAudioLanguagesChanged() { root.applyPlaybackSettings() }
+        function onSubtitleLanguagesChanged() { root.applyPlaybackSettings() }
+        function onSubtitleScaleChanged() { root.applyPlaybackSettings() }
     }
 
     function toggleShortcutsPanel() {
