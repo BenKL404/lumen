@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Lumen is a Linux video player inspired by PotPlayer, built with **Rust + CXX-Qt 0.7 + QML (Qt 6) + libmpv**. Status: v0.1 skeleton.
+Lumen is a Linux video player inspired by PotPlayer, built with **Rust + CXX-Qt 0.7 + QML (Qt 6) + libmpv**. Status: v1.0 (whole roadmap done).
 
 - `README.md` — setup, architecture, roadmap, known pitfalls (French).
 - `FONCTIONNALITES.md` — user-facing feature list, design identity (colors, spacing, animation timings) and the v0.2 → v1.0 roadmap. Check it before implementing UI or roadmap features so the result matches the planned design.
