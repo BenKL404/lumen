@@ -21,8 +21,17 @@ finish-args:
   - --socket=pulseaudio
   # Vidéos en ligne (yt-dlp) et recherche de sous-titres
   - --share=network
-  # Playlist automatique (fichiers voisins), sous-titres enregistrés à côté de la vidéo
-  - --filesystem=host
+  # Playlist automatique (fichiers voisins) et sous-titres enregistrés à côté de la vidéo,
+  # dans les dossiers habituels des vidéos et sur les disques externes. Ailleurs, le fichier
+  # passe par le portail de documents : il s'ouvre seul, sans ses voisins.
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-download
+  - --filesystem=xdg-music
+  - --filesystem=/media
+  - --filesystem=/run/media
+  - --filesystem=/mnt
+  # Captures d'écran (enregistrées sur le Bureau)
+  - --filesystem=xdg-desktop
   # Écran maintenu allumé pendant la lecture
   - --talk-name=org.freedesktop.ScreenSaver
   # Contrôle par le bureau (MPRIS) et fenêtre unique

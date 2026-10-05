@@ -1,8 +1,8 @@
 pkgbase = lumen-player-git
 	pkgdesc = Lecteur vidéo moderne pour Linux, inspiré de PotPlayer (Qt 6, libmpv)
-	pkgver = 1.0.0
+	pkgver = 1.0.1
 	pkgrel = 1
-	url = https://github.com/BenKL404/lumen-player
+	url = https://github.com/BenKL404/lumen
 	arch = x86_64
 	arch = aarch64
 	license = GPL-3.0-or-later
@@ -20,7 +20,7 @@ pkgbase = lumen-player-git
 	optdepends = xdg-desktop-portal: sélecteur de fichiers du bureau
 	provides = lumen-player
 	conflicts = lumen-player
-	source = lumen::git+https://github.com/BenKL404/lumen-player.git
+	source = lumen::git+https://github.com/BenKL404/lumen.git
 	sha256sums = SKIP
 
 pkgname = lumen-player-git
