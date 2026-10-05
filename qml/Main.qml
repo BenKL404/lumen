@@ -37,7 +37,8 @@ Window {
     property bool controlsVisible: true
     // Un menu ou un panneau est ouvert : les contrôles restent visibles, Échap et un clic à côté le ferment
     readonly property bool anyPopupOpen: trackMenu.visible || imagePanel.visible || audioPanel.visible
-        || shortcutsPanel.visible || urlPanel.visible || preferencesPanel.visible || appMenu.visible || contextMenu.visible
+        || shortcutsPanel.visible || urlPanel.visible || preferencesPanel.visible || subtitleSearchPanel.visible
+        || appMenu.visible || contextMenu.visible
     property bool pinned: false
     property bool wasMaximized: false
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -216,6 +217,7 @@ Window {
                 .concat(subTracks.map(t => trackEntry(t, "sid")), [
                 { separator: true },
                 { label: "Ajouter un fichier…", action: () => subtitleDialog.open() },
+                { label: "Rechercher en ligne…", icon: "search", shortcut: root.keyLabel("chercher_sous_titres"), action: () => root.openSubtitleSearch() },
                 { label: "Décaler de −0,1 s", shortcut: root.keyLabel("decalage_sous_titres_moins"), action: () => root.shiftSubDelay(-0.1) },
                 { label: "Décaler de +0,1 s", shortcut: root.keyLabel("decalage_sous_titres_plus"), action: () => root.shiftSubDelay(0.1) },
                 { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
@@ -486,6 +488,7 @@ Window {
     }
 
     function closePopups() {
+        subtitleSearchPanel.visible = false
         preferencesPanel.visible = false
         audioPanel.visible = false
         urlPanel.visible = false
@@ -1055,6 +1058,7 @@ Window {
             trackMenu.visible = false
             root.toggleAudioPanel()
         }
+        onSearchSubtitlesRequested: root.openSubtitleSearch()
     }
 
     AudioPanel {
@@ -1097,6 +1101,41 @@ Window {
             root.openUrl(url)
         }
         onCloseRequested: visible = false
+    }
+
+    SubtitleSearch {
+        id: subtitleSearch
+        apiKey: settings.opensubtitlesApiKey
+        onFound: (results) => subtitleSearchPanel.showResults(results)
+        onFailed: (message) => {
+            subtitleSearchPanel.status = message
+            if (!subtitleSearchPanel.visible)
+                root.osd(message, 5000)
+        }
+        onDownloaded: (path) => {
+            video.command(["sub-add", path, "select"])
+            subtitleSearchPanel.visible = false
+            root.osd("Sous-titres ajoutés : " + utils.fileName(path))
+        }
+    }
+
+    SubtitleSearchPanel {
+        id: subtitleSearchPanel
+        anchors.centerIn: parent
+        height: Math.min(500, parent.height - 60)
+        visible: false
+        theme: root.theme
+        search: subtitleSearch
+        hasKey: settings.opensubtitlesApiKey !== ""
+        mediaUrl: root.currentUrl
+        onCloseRequested: visible = false
+        onPreferencesRequested: {
+            visible = false
+            preferencesPanel.category = "sous-titres"
+            root.togglePreferences()
+        }
+        onSearchRequested: (query, languages) => subtitleSearch.search(root.currentUrl, query, languages)
+        onDownloadRequested: (result) => subtitleSearch.download(result.fileId, result.language, root.currentUrl)
     }
 
     // Préférences : fenêtre au centre, sur un voile qui assombrit le reste
@@ -1267,6 +1306,7 @@ Window {
         "reglages_image": () => toggleImagePanel(),
         "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() },
         "raccourcis": () => toggleShortcutsPanel(),
+        "chercher_sous_titres": () => openSubtitleSearch(),
         "preferences": () => togglePreferences()
     })
 
@@ -1306,6 +1346,13 @@ Window {
             openUrl(text)
         else
             openUrlPanel(text)
+    }
+
+    // Recherche de sous-titres en ligne (OpenSubtitles)
+    function openSubtitleSearch() {
+        closePopups()
+        subtitleSearchPanel.open(subtitleSearch.suggestedQuery(currentUrl, video.mediaTitle),
+                                 settings.subtitleLanguages || "fr,en")
     }
 
     function togglePreferences() {

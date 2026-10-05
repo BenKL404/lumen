@@ -37,6 +37,7 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("vitesse_moins", "Ralentir", &["["]),
     ("vitesse_normale", "Vitesse normale", &["Backspace"]),
     ("sous_titres_suivants", "Sous-titres suivants", &["J"]),
+    ("chercher_sous_titres", "Rechercher des sous-titres en ligne", &["Ctrl+J"]),
     ("piste_audio_suivante", "Piste audio suivante", &["A"]),
     ("decalage_sous_titres_moins", "Sous-titres −0,1 s", &["Z"]),
     ("decalage_sous_titres_plus", "Sous-titres +0,1 s", &["X"]),

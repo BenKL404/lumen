@@ -2,6 +2,7 @@ pub mod app;
 pub mod audio;
 pub mod history;
 pub mod mpris;
+pub mod online_subtitles;
 pub mod playlist;
 pub mod screen_guard;
 pub mod settings;

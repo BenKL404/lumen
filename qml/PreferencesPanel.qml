@@ -99,6 +99,10 @@ Rectangle {
 
             { cat: "sous-titres", label: "Langues de sous-titres préférées", desc: "Codes séparés par des virgules ; vide : selon le fichier",
               type: "text", placeholder: "fr,en", get: () => s.subtitleLanguages, set: (v) => s.subtitleLanguages = panel.languageList(v) },
+            { cat: "sous-titres", label: "Clé d'API OpenSubtitles", desc: "Pour la recherche en ligne (Ctrl+J) ; gratuite sur opensubtitles.com",
+              type: "text", placeholder: "Coller la clé ici", get: () => s.opensubtitlesApiKey, set: (v) => s.opensubtitlesApiKey = v.trim() },
+            { cat: "sous-titres", label: "Obtenir une clé", desc: "Compte gratuit › profil › API consumers", type: "button", button: "Ouvrir le site",
+              action: () => Qt.openUrlExternally("https://www.opensubtitles.com/consumers") },
             { cat: "sous-titres", label: "Taille des sous-titres", type: "slider", min: 50, max: 300, neutral: 100, unit: " %",
               get: () => s.subtitleScale, set: (v) => s.subtitleScale = v },
 
