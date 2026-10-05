@@ -37,9 +37,9 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Redimensionnement intelligent qui respecte le format de la vidéo.
 
 ### Barre de contrôle
-- Panneau flottant en verre fumé, détaché des bords, qui apparaît au mouvement de la souris.
+- Sous la vidéo en mode fenêtré ; en plein écran et en mode mini, panneau flottant en verre fumé qui apparaît au mouvement de la souris.
 - **Gauche** : lecture/pause (bouton ambre mis en avant), précédent, suivant, ±10 s, temps écoulé / durée totale.
-- **Droite** : vitesse, pistes audio, sous-titres, volume, capture, playlist, paramètres, plein écran.
+- **Droite** : vitesse, pistes audio, sous-titres, volume, capture, playlist, réglages d'image, plein écran.
 - Clic sur la durée totale pour afficher le **temps restant** à la place (comme PotPlayer).
 - Barre de progression qui s'épaissit au survol, avec **miniature** et heure au-dessus du curseur.
 - **Repères de chapitres** visibles directement sur la barre de progression.
@@ -47,9 +47,9 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 
 ### Menus et panneaux
 - **Menu clic droit complet**, signature de PotPlayer : ouvrir, lecture, vidéo, audio, sous-titres, playlist, captures, paramètres… avec sous-menus, icônes et raccourcis affichés à droite.
-- **Playlist latérale** glissant depuis la droite : miniatures, durées, élément en cours surligné en ambre, glisser-déposer pour réorganiser.
+- **Playlist latérale** accolée à droite de la fenêtre : durées, élément en cours surligné en ambre, glisser-déposer pour réorganiser.
 - **Panneau d'informations** (touche Tab) : codec, résolution, débit, images par seconde, décodage matériel actif ou non, à la manière de l'écran d'infos de PotPlayer.
-- **Paramètres** dans une fenêtre moderne à onglets (Général, Lecture, Vidéo, Audio, Sous-titres, Raccourcis, Apparence), avec recherche intégrée.
+- **Paramètres** dans une fenêtre moderne à onglets (Général, Lecture, Vidéo, Audio, Sous-titres, Raccourcis, Apparence, Extensions), avec recherche intégrée.
 
 ### OSD (messages à l'écran)
 - Messages discrets en haut à droite : volume, vitesse, saut, capture, piste changée.
@@ -175,4 +175,4 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Recherche automatique de sous-titres sur Internet.
 - Système d'extensions pour ajouter des fonctions.
 - Thèmes et apparence personnalisables.
-- Installation facile via Flatpak, AppImage et AUR.
+- Installation facile : AppImage publiée, paquets Flatpak et AUR prêts (`packaging/`).

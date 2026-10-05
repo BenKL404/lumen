@@ -7,7 +7,20 @@ Lecteur vidéo moderne et performant pour Linux, inspiré de PotPlayer.
 **Stack :** Rust + CXX-Qt + QML (Qt 6) + libmpv
 
 > Version 1.0 : toute la feuille de route est réalisée (voir [FONCTIONNALITES.md](FONCTIONNALITES.md)).
-> Paquets : AppImage, Flatpak et AUR (voir [packaging/README.md](packaging/README.md)).
+
+---
+
+## Télécharger
+
+Une **AppImage** (Linux x86_64) est jointe à chaque [version publiée](https://github.com/BenKL404/lumen-player/releases) :
+
+```bash
+chmod +x Lumen-1.0.0-x86_64.AppImage
+./Lumen-1.0.0-x86_64.AppImage
+```
+
+Les fichiers Flatpak et AUR sont prêts dans [packaging/](packaging/README.md) mais pas encore
+publiés sur Flathub ni sur l'AUR. Pour compiler depuis les sources, voir ci-dessous.
 
 ---
 
@@ -30,19 +43,20 @@ Les modules `qml6-module-*` ne sont vérifiés qu'au lancement : s'il en manque 
 réussit mais la fenêtre ne s'ouvre pas (`module "…" is not installed`). `QtQuick.Dialogs` a besoin
 des modules Controls, Templates, Layouts et FolderListModel.
 
-**Pop!_OS 24.04 mis à jour depuis 22.04 :** si `apt` refuse `libmpv-dev` à cause de `libvdpau1`,
+**Ubuntu / Pop!_OS 24.04 mis à jour depuis 22.04 :** si `apt` refuse `libmpv-dev` à cause de `libvdpau1`,
 ajoute `--allow-downgrades libvdpau1=1.5-2build1 libjack-jackd2-dev` à la commande.
 
 ### Fedora
 
 ```bash
-sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel mpv-libs-devel pkgconf-pkg-config
+sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtsvg mpv-libs-devel \
+  ffmpeg-free-devel pkgconf-pkg-config
 ```
 
 ### Arch Linux
 
 ```bash
-sudo pacman -S qt6-base qt6-declarative mpv pkgconf
+sudo pacman -S qt6-base qt6-declarative qt6-svg mpv ffmpeg pkgconf
 ```
 
 ### Rust
@@ -67,7 +81,7 @@ export QMAKE=/usr/bin/qmake6
 ```bash
 cargo run            # mode debug
 cargo run --release  # mode optimisé
-cargo test           # tests des utilitaires Rust
+cargo test           # tests de la logique Rust
 ```
 
 La première compilation est longue (CXX-Qt génère et compile beaucoup de code C++).
@@ -186,22 +200,17 @@ par Lumen (F1) : un script ne reçoit pas les touches, il réagit aux événemen
 
 ```
 lumen/
-├── Cargo.toml             Dépendances Rust
-├── build.rs               Compile Rust + C++ + QML ensemble (cxx-qt-build)
+├── Cargo.toml, build.rs   Dépendances ; build.rs compile Rust + C++ + QML ensemble (cxx-qt-build)
 ├── src/
-│   ├── main.rs            Point d'entrée : initialise Qt et charge l'interface
-│   └── bridge/
-│       ├── mod.rs
-│       ├── utils.rs       Objet Rust exposé à QML (formatage du temps, noms de fichiers)
-│       └── video.rs       Pont Rust → C++ pour initialiser le moteur vidéo
-├── cpp/
-│   ├── mpvitem.h          Composant vidéo QML basé sur libmpv
-│   └── mpvitem.cpp
-└── qml/
-    ├── Main.qml           Fenêtre, design tokens, glisser-déposer, raccourcis, OSD
-    ├── ControlBar.qml     Barre de contrôle translucide auto-masquée
-    ├── SeekBar.qml        Curseur générique (position / volume) avec info-bulle
-    └── IconButton.qml     Bouton rond réutilisable
+│   ├── main.rs            Point d'entrée : options d'environnement, fenêtre unique, chargement de l'interface
+│   ├── single_instance.rs Transmet le fichier à un Lumen déjà ouvert (MPRIS)
+│   └── bridge/            Logique en Rust exposée à QML : historique (SQLite), playlist, paramètres,
+│                          raccourcis, son, shaders, thèmes, extensions, sous-titres en ligne, MPRIS…
+├── cpp/                   Composant vidéo libmpv (mpvitem), miniatures, durée des fichiers
+├── qml/                   Interface : Main.qml (fenêtre, thème, raccourcis, OSD) et ses panneaux
+├── assets/                Logo, icônes, fichier .desktop, fiche AppStream, shaders
+├── scripts/               Installation, désinstallation, AppImage, sources Flatpak
+└── packaging/             Flatpak, AUR (voir packaging/README.md)
 ```
 
 ---
@@ -211,7 +220,7 @@ lumen/
 ```
 ┌──────────────────────────────────────────────┐
 │  QML (interface)                             │
-│  Main · ControlBar · SeekBar · IconButton    │
+│  Main · barres · playlist · panneaux         │
 └───────────────┬──────────────────┬───────────┘
                 │                  │
      ┌──────────▼─────────┐  ┌─────▼────────────────┐
@@ -234,21 +243,15 @@ d'affichage et de commandes. **Toute la logique applicative doit être écrite e
 
 ### Le composant `MpvVideo` (exposé à QML)
 
-| Propriété    | Type   | Accès          |
-|--------------|--------|----------------|
-| `position`   | double | lecture        |
-| `duration`   | double | lecture        |
-| `paused`     | bool   | lecture/écriture |
-| `volume`     | double | lecture/écriture (0–130) |
-| `speed`      | double | lecture/écriture (0.25–4) |
-| `mediaTitle` | string | lecture        |
-| `hasMedia`   | bool   | lecture        |
+Propriétés observées : `position`, `duration`, `paused`, `volume` (0–130), `speed`, `muted`,
+`mediaTitle`, `hasMedia`, `tracks`, `subDelay`, `chapters`, `chapter`, `abLoopA`/`abLoopB`,
+`eofReached`, `info`.
 
-Méthodes : `loadFile(url)`, `togglePause()`, `seekAbsolute(s)`, `seekRelative(s)`,
-`frameStep(forward)`, `screenshot()`, et `command([...])` pour envoyer
-**n'importe quelle commande mpv** (ex. `["cycle", "sub"]`).
+Méthodes : `loadFile(url)`, `togglePause()`, `stop()`, `seekAbsolute(s)`, `seekRelative(s)`,
+`frameStep(forward)`, `screenshot()`, `getProperty(nom)` pour lire n'importe quelle propriété
+mpv, et `command([...])` pour envoyer **n'importe quelle commande mpv** (ex. `["cycle", "sub"]`).
 
-Signaux : `fileLoaded()`, `endOfFile()`, plus un signal `…Changed` par propriété.
+Signaux : `fileLoaded()`, `endOfFile()`, `loadFailed(raison)`, `scriptMessage(…)`, plus un signal `…Changed` par propriété.
 
 ---
 
@@ -293,6 +296,7 @@ personnalisables »).
 
 - Miniatures dans la playlist
 - Publication sur Flathub et l'AUR (fichiers prêts dans `packaging/`)
+- Captures d'écran dans la fiche AppStream
 - Traductions de l'interface
 
 ---
@@ -321,4 +325,4 @@ Lumen est un logiciel libre, distribué sous **GPL-3.0-or-later** (voir [LICENSE
 - Shaders AMD FidelityFX CAS et FSR : MIT (voir `assets/shaders/README.md`)
 - Icônes : tracés du jeu Lucide (ISC)
 
-N'utilise ni le nom, ni les icônes, ni les skins de PotPlayer.
+Lumen n'est pas affilié à PotPlayer : il s'en inspire sans reprendre son nom, ses icônes ni ses skins.
