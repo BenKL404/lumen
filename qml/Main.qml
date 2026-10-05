@@ -56,18 +56,18 @@ Window {
     readonly property bool hasNext: playlist.nextIndex >= 0
 
     readonly property var menuEntries: [
-        { label: "Ouvrir un fichier…", shortcut: "O", action: () => fileDialog.open() },
-        { label: "Ouvrir un dossier…", shortcut: "Ctrl+O", action: () => folderDialog.open() },
+        { label: "Ouvrir un fichier…", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
+        { label: "Ouvrir un dossier…", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
         { label: "Ajouter des sous-titres…", action: () => subtitleDialog.open() },
         { separator: true },
-        { label: "Lecture / pause", shortcut: "Espace", action: () => video.togglePause() },
+        { label: "Lecture / pause", shortcut: root.keyLabel("lecture_pause"), action: () => video.togglePause() },
         { label: "Arrêter", action: () => root.stop() },
-        { label: "Capture d'écran", shortcut: "S", action: () => root.screenshot() },
+        { label: "Capture d'écran", shortcut: root.keyLabel("capture"), action: () => root.screenshot() },
         { separator: true },
-        { label: "Playlist", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
-        { label: "Lecture aléatoire", shortcut: "H", checked: playlist.shuffle, action: () => root.toggleShuffle() },
-        { label: "Répéter : " + root.repeatNames[playlist.repeatMode], shortcut: "R", checked: playlist.repeatMode !== 0, action: () => root.cycleRepeat() },
-        { label: "Plein écran", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
+        { label: "Playlist", shortcut: root.keyLabel("playlist"), checked: playlistPanel.open, action: () => root.togglePlaylist() },
+        { label: "Lecture aléatoire", shortcut: root.keyLabel("aleatoire"), checked: playlist.shuffle, action: () => root.toggleShuffle() },
+        { label: "Répéter : " + root.repeatNames[playlist.repeatMode], shortcut: root.keyLabel("repetition"), checked: playlist.repeatMode !== 0, action: () => root.cycleRepeat() },
+        { label: "Plein écran", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
         { label: "Toujours au premier plan", checked: root.pinned, action: () => root.pinned = !root.pinned },
         { separator: true },
         { label: "Reprendre là où je me suis arrêté", checked: settings.resumePlayback,
@@ -78,7 +78,7 @@ Window {
           action: () => root.toggleSetting("singleInstance", "Fenêtre unique") },
         { label: "Effacer l'historique de lecture", icon: "trash", action: () => { history.clear(); root.osd("Historique de lecture effacé") } },
         { separator: true },
-        { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
+        { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
     ]
 
     function toggleSetting(name, label) {
@@ -136,30 +136,30 @@ Window {
         })
 
         return [
-            { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: "O", action: () => fileDialog.open() },
-            { label: "Ouvrir un dossier…", icon: "folder", shortcut: "Ctrl+O", action: () => folderDialog.open() },
+            { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
+            { label: "Ouvrir un dossier…", icon: "folder", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
             { label: "Ajouter à la playlist…", action: () => addDialog.open() },
             { separator: true },
             { label: "Lecture", icon: "play", enabled: has, submenu: [
-                { label: video.paused ? "Lecture" : "Pause", icon: video.paused ? "play" : "pause", shortcut: "Espace", action: () => video.togglePause() },
+                { label: video.paused ? "Lecture" : "Pause", icon: video.paused ? "play" : "pause", shortcut: root.keyLabel("lecture_pause"), action: () => video.togglePause() },
                 { label: "Arrêter", icon: "stop", action: () => root.stop() },
                 { separator: true },
-                { label: "Précédent", icon: "skip-back", shortcut: "PgUp", enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
-                { label: "Suivant", icon: "skip-forward", shortcut: "PgDn", enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
+                { label: "Précédent", icon: "skip-back", shortcut: root.keyLabel("fichier_precedent"), enabled: root.hasPrevious, action: () => root.playAt(playlist.previousIndex) },
+                { label: "Suivant", icon: "skip-forward", shortcut: root.keyLabel("fichier_suivant"), enabled: root.hasNext, action: () => root.playAt(playlist.nextIndex) },
                 { separator: true },
-                { label: root.abLoopLabel(), icon: "repeat", shortcut: "L", checked: video.abLoopB >= 0, action: () => root.cycleAbLoop() },
+                { label: root.abLoopLabel(), icon: "repeat", shortcut: root.keyLabel("boucle_ab"), checked: video.abLoopB >= 0, action: () => root.cycleAbLoop() },
                 { separator: true },
-                { label: "Lecture aléatoire", icon: "shuffle", shortcut: "H", checked: playlist.shuffle, action: () => root.toggleShuffle() },
+                { label: "Lecture aléatoire", icon: "shuffle", shortcut: root.keyLabel("aleatoire"), checked: playlist.shuffle, action: () => root.toggleShuffle() },
                 { label: "Ne pas répéter", checked: playlist.repeatMode === 0, action: () => root.setRepeat(0) },
                 { label: "Répéter le fichier", checked: playlist.repeatMode === 1, action: () => root.setRepeat(1) },
                 { label: "Répéter la playlist", checked: playlist.repeatMode === 2, action: () => root.setRepeat(2) },
                 { separator: true },
-                { label: "Reculer de 5 s", shortcut: "←", action: () => root.seekBy(-5) },
-                { label: "Avancer de 5 s", shortcut: "→", action: () => root.seekBy(5) },
-                { label: "Reculer de 30 s", shortcut: "Ctrl+←", action: () => root.seekBy(-30) },
-                { label: "Avancer de 30 s", shortcut: "Ctrl+→", action: () => root.seekBy(30) },
-                { label: "Image précédente", shortcut: ",", action: () => video.frameStep(false) },
-                { label: "Image suivante", shortcut: ".", action: () => video.frameStep(true) }
+                { label: "Reculer de 5 s", shortcut: root.keyLabel("reculer"), action: () => root.seekBy(-5) },
+                { label: "Avancer de 5 s", shortcut: root.keyLabel("avancer"), action: () => root.seekBy(5) },
+                { label: "Reculer de 30 s", shortcut: root.keyLabel("reculer_30s"), action: () => root.seekBy(-30) },
+                { label: "Avancer de 30 s", shortcut: root.keyLabel("avancer_30s"), action: () => root.seekBy(30) },
+                { label: "Image précédente", shortcut: root.keyLabel("image_precedente"), action: () => video.frameStep(false) },
+                { label: "Image suivante", shortcut: root.keyLabel("image_suivante"), action: () => video.frameStep(true) }
             ] },
             { label: "Chapitres", icon: "list", enabled: has && video.chapters.length > 0, submenu:
                 video.chapters.map((c, i) => ({
@@ -170,12 +170,12 @@ Window {
                     action: () => root.goToChapter(i)
                 })).concat([
                     { separator: true },
-                    { label: "Chapitre précédent", shortcut: "Ctrl+PgUp", action: () => root.stepChapter(-1) },
-                    { label: "Chapitre suivant", shortcut: "Ctrl+PgDn", action: () => root.stepChapter(1) }
+                    { label: "Chapitre précédent", shortcut: root.keyLabel("chapitre_precedent"), action: () => root.stepChapter(-1) },
+                    { label: "Chapitre suivant", shortcut: root.keyLabel("chapitre_suivant"), action: () => root.stepChapter(1) }
                 ])
             },
             { label: "Signets", icon: "pin", enabled: has, submenu:
-                [{ label: "Ajouter un signet ici", icon: "plus", shortcut: "B", action: () => root.addBookmark() }]
+                [{ label: "Ajouter un signet ici", icon: "plus", shortcut: root.keyLabel("signet"), action: () => root.addBookmark() }]
                 .concat(root.bookmarks.length > 0 ? [{ separator: true }] : [],
                         root.bookmarks.map((t, i) => ({
                             label: "Signet " + (i + 1), shortcut: utils.formatTime(t),
@@ -188,7 +188,7 @@ Window {
             { label: "Vitesse", icon: "gauge", enabled: has, submenu:
                 [0.5, 0.75, 1, 1.25, 1.5, 2].map(v => ({
                     label: v === 1 ? "×1 (normale)" : "×" + String(v).replace(".", ","),
-                    shortcut: v === 1 ? "Retour arr." : "",
+                    shortcut: v === 1 ? root.keyLabel("vitesse_normale") : "",
                     checked: Math.abs(video.speed - v) < 0.01,
                     action: () => root.setSpeed(v)
                 }))
@@ -197,23 +197,23 @@ Window {
                 (audioTracks.length > 0 ? audioTracks.map(t => trackEntry(t, "aid"))
                                         : [{ label: "Aucune piste audio", enabled: false }]).concat([
                 { separator: true },
-                { label: "Muet", shortcut: "M", checked: video.muted, action: () => root.toggleMute() },
-                { label: "Augmenter le volume", shortcut: "↑", action: () => root.changeVolume(5) },
-                { label: "Baisser le volume", shortcut: "↓", action: () => root.changeVolume(-5) }
+                { label: "Muet", shortcut: root.keyLabel("muet"), checked: video.muted, action: () => root.toggleMute() },
+                { label: "Augmenter le volume", shortcut: root.keyLabel("volume_plus"), action: () => root.changeVolume(5) },
+                { label: "Baisser le volume", shortcut: root.keyLabel("volume_moins"), action: () => root.changeVolume(-5) }
             ]) },
             { label: "Sous-titres", icon: "captions", enabled: has, submenu:
                 [{ label: "Désactivés", checked: !subTracks.some(t => t.selected), action: () => video.command(["set", "sid", "no"]) }]
                 .concat(subTracks.map(t => trackEntry(t, "sid")), [
                 { separator: true },
                 { label: "Ajouter un fichier…", action: () => subtitleDialog.open() },
-                { label: "Décaler de −0,1 s", shortcut: "Z", action: () => root.shiftSubDelay(-0.1) },
-                { label: "Décaler de +0,1 s", shortcut: "X", action: () => root.shiftSubDelay(0.1) },
+                { label: "Décaler de −0,1 s", shortcut: root.keyLabel("decalage_sous_titres_moins"), action: () => root.shiftSubDelay(-0.1) },
+                { label: "Décaler de +0,1 s", shortcut: root.keyLabel("decalage_sous_titres_plus"), action: () => root.shiftSubDelay(0.1) },
                 { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
             ]) },
             { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
-                { label: "Plein écran", icon: "maximize", shortcut: "F", checked: root.fullscreen, action: () => root.toggleFullScreen() },
-                { label: "Capture d'écran", icon: "camera", shortcut: "S", action: () => root.screenshot() },
-                { label: "Réglages d'image…", icon: "settings", shortcut: "I", action: () => root.toggleImagePanel() },
+                { label: "Plein écran", icon: "maximize", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
+                { label: "Capture d'écran", icon: "camera", shortcut: root.keyLabel("capture"), action: () => root.screenshot() },
+                { label: "Réglages d'image…", icon: "settings", shortcut: root.keyLabel("reglages_image"), action: () => root.toggleImagePanel() },
                 { separator: true },
                 aspectEntry("Format automatique", "-1"),
                 aspectEntry("16:9", "16:9"),
@@ -223,10 +223,10 @@ Window {
                 { label: "Pivoter de 90°", icon: "rotate-cw", checked: root.rotation !== 0, action: () => root.rotate() }
             ] },
             { separator: true },
-            { label: "Playlist", icon: "list", shortcut: "F6", checked: playlistPanel.open, action: () => root.togglePlaylist() },
+            { label: "Playlist", icon: "list", shortcut: root.keyLabel("playlist"), checked: playlistPanel.open, action: () => root.togglePlaylist() },
             { label: "Toujours au premier plan", icon: "pin", checked: root.pinned, action: () => root.pinned = !root.pinned },
             { separator: true },
-            { label: "Quitter", shortcut: "Ctrl+Q", action: () => root.close() }
+            { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
         ]
     }
 
@@ -441,9 +441,11 @@ Window {
             setPlaylistOpen(false)
     }
 
-    function osd(message) {
+    // Message à l'écran ; `duration` plus longue pour un avertissement
+    function osd(message, duration) {
         osdText.text = message
         osdBox.opacity = 1
+        osdTimer.interval = duration || 1200
         osdTimer.restart()
     }
 
@@ -1064,16 +1066,71 @@ Window {
     }
 
     // ------------------------------------------------ Raccourcis clavier
-    Shortcut { sequence: "Space"; onActivated: video.togglePause() }
-    Shortcut { sequence: "Left"; onActivated: root.seekBy(-5) }
-    Shortcut { sequence: "Right"; onActivated: root.seekBy(5) }
-    Shortcut { sequence: "Ctrl+Left"; onActivated: root.seekBy(-30) }
-    Shortcut { sequence: "Ctrl+Right"; onActivated: root.seekBy(30) }
-    Shortcut { sequence: "Up"; onActivated: root.changeVolume(5) }
-    Shortcut { sequence: "Down"; onActivated: root.changeVolume(-5) }
-    Shortcut { sequence: "M"; onActivated: root.toggleMute() }
-    Shortcut { sequence: "F"; onActivated: root.toggleFullScreen() }
-    Shortcut { sequence: "Return"; onActivated: root.toggleFullScreen() }
+    // Touches définies dans settings.toml (section [raccourcis], voir shortcuts.rs) ;
+    // ici, seulement ce que fait chaque action.
+    readonly property var keyActions: ({
+        "lecture_pause": () => video.togglePause(),
+        "reculer": () => seekBy(-5),
+        "avancer": () => seekBy(5),
+        "reculer_30s": () => seekBy(-30),
+        "avancer_30s": () => seekBy(30),
+        "volume_plus": () => changeVolume(5),
+        "volume_moins": () => changeVolume(-5),
+        "muet": () => toggleMute(),
+        "plein_ecran": () => toggleFullScreen(),
+        "ouvrir": () => fileDialog.open(),
+        "ouvrir_dossier": () => folderDialog.open(),
+        "quitter": () => close(),
+        "capture": () => screenshot(),
+        "image_suivante": () => video.frameStep(true),
+        "image_precedente": () => video.frameStep(false),
+        "vitesse_plus": () => setSpeed(Math.min(4, Math.round((video.speed + 0.1) * 10) / 10)),
+        "vitesse_moins": () => setSpeed(Math.max(0.25, Math.round((video.speed - 0.1) * 10) / 10)),
+        "vitesse_normale": () => setSpeed(1),
+        "sous_titres_suivants": () => { video.command(["cycle", "sub"]); osd("Sous-titres suivants") },
+        "piste_audio_suivante": () => { video.command(["cycle", "audio"]); osd("Piste audio suivante") },
+        "decalage_sous_titres_moins": () => shiftSubDelay(-0.1),
+        "decalage_sous_titres_plus": () => shiftSubDelay(0.1),
+        "fichier_suivant": () => playAt(playlist.nextIndex),
+        "fichier_precedent": () => playAt(playlist.previousIndex),
+        "chapitre_suivant": () => stepChapter(1),
+        "chapitre_precedent": () => stepChapter(-1),
+        "playlist": () => togglePlaylist(),
+        "repetition": () => cycleRepeat(),
+        "aleatoire": () => toggleShuffle(),
+        "boucle_ab": () => cycleAbLoop(),
+        "signet": () => addBookmark(),
+        "reglages_image": () => toggleImagePanel(),
+        "retirer_de_la_playlist": () => { if (playlistPanel.open) playlistPanel.removeSelected() }
+    })
+
+    Instantiator {
+        model: Object.keys(root.keyActions)
+        delegate: Shortcut {
+            required property string modelData
+            sequences: settings.keys(modelData)
+            onActivated: root.keyActions[modelData]()
+        }
+    }
+
+    // Touche d'une action, en clair pour les menus (« Espace », « Ctrl+O »…)
+    function keyLabel(action) {
+        const key = settings.keys(action)[0]
+        if (key === undefined)
+            return ""
+        const names = { "Space": "Espace", "Return": "Entrée", "Backspace": "Retour arr.", "Delete": "Suppr",
+                        "Left": "←", "Right": "→", "Up": "↑", "Down": "↓", "PgUp": "Pg préc.", "PgDown": "Pg suiv." }
+        return key.split("+").map(part => names[part] || part).join("+")
+    }
+
+    // Problèmes dans [raccourcis] : signalés au démarrage, après le nom du fichier ouvert
+    Timer {
+        interval: 1800
+        running: settings.shortcutWarnings() !== ""
+        onTriggered: root.osd(settings.shortcutWarnings().split("\n")[0], 6000)
+    }
+
+    // Échap n'est pas personnalisable : il ferme d'abord ce qui est ouvert
     Shortcut {
         sequence: "Escape"
         onActivated: {
@@ -1086,32 +1143,4 @@ Window {
             }
         }
     }
-    Shortcut { sequence: "O"; onActivated: fileDialog.open() }
-    Shortcut { sequence: "Ctrl+O"; onActivated: folderDialog.open() }
-    Shortcut { sequence: "R"; onActivated: root.cycleRepeat() }
-    Shortcut { sequence: "L"; onActivated: root.cycleAbLoop() }
-    Shortcut { sequence: "I"; onActivated: root.toggleImagePanel() }
-    Shortcut { sequence: "B"; onActivated: root.addBookmark() }
-    Shortcut { sequence: "Ctrl+PgUp"; onActivated: root.stepChapter(-1) }
-    Shortcut { sequence: "Ctrl+PgDown"; onActivated: root.stepChapter(1) }
-    Shortcut { sequence: "H"; onActivated: root.toggleShuffle() }
-    Shortcut { sequence: "S"; onActivated: root.screenshot() }
-    Shortcut { sequence: "Ctrl+Q"; onActivated: root.close() }
-    Shortcut { sequence: "."; onActivated: video.frameStep(true) }
-    Shortcut { sequence: ","; onActivated: video.frameStep(false) }
-    Shortcut { sequence: "]"; onActivated: root.setSpeed(Math.min(4, Math.round((video.speed + 0.1) * 10) / 10)) }
-    Shortcut { sequence: "["; onActivated: root.setSpeed(Math.max(0.25, Math.round((video.speed - 0.1) * 10) / 10)) }
-    Shortcut { sequence: "Backspace"; onActivated: root.setSpeed(1) }
-    Shortcut { sequence: "J"; onActivated: { video.command(["cycle", "sub"]); root.osd("Sous-titres suivants") } }
-    Shortcut { sequence: "PgDown"; onActivated: root.playAt(playlist.nextIndex) }
-    Shortcut { sequence: "PgUp"; onActivated: root.playAt(playlist.previousIndex) }
-    Shortcut { sequence: "F6"; onActivated: root.togglePlaylist() }
-    Shortcut {
-        sequence: "Delete"
-        enabled: playlistPanel.open
-        onActivated: playlistPanel.removeSelected()
-    }
-    Shortcut { sequence: "Z"; onActivated: root.shiftSubDelay(-0.1) }
-    Shortcut { sequence: "X"; onActivated: root.shiftSubDelay(0.1) }
-    Shortcut { sequence: "A"; onActivated: { video.command(["cycle", "audio"]); root.osd("Piste audio suivante") } }
 }

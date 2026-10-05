@@ -3,6 +3,13 @@
 
 #[cxx_qt::bridge]
 pub mod qobject {
+    unsafe extern "C++" {
+        include!("cxx-qt-lib/qstring.h");
+        type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qstringlist.h");
+        type QStringList = cxx_qt_lib::QStringList;
+    }
+
     #[auto_cxx_name]
     extern "RustQt" {
         #[qobject]
@@ -30,13 +37,26 @@ pub mod qobject {
         /// Enregistre les paramètres sur le disque.
         #[qinvokable]
         fn save(self: &Settings);
+
+        /// Touches actives d'une action (voir shortcuts.rs), au format de QKeySequence.
+        #[qinvokable]
+        fn keys(self: &Settings, action: &QString) -> QStringList;
+
+        /// Problèmes de la section [raccourcis] (conflits, actions inconnues), un par ligne.
+        #[qinvokable]
+        fn shortcut_warnings(self: &Settings) -> QString;
     }
 }
 
 use std::path::{Path, PathBuf};
 
+use std::collections::BTreeMap;
+
 use cxx_qt::CxxQtType;
+use cxx_qt_lib::{QList, QString, QStringList};
 use serde::{Deserialize, Serialize};
+
+use super::shortcuts::{self, Keys, Resolved};
 
 /// Contenu du fichier. Toute clé absente prend sa valeur par défaut.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,6 +85,9 @@ pub struct SettingsFile {
     pub hue: i32,
     /// Zoom de l'image en % (100 : taille normale)
     pub zoom: i32,
+    /// Raccourcis clavier ; en dernier : TOML exige les tables après les valeurs simples
+    #[serde(rename = "raccourcis")]
+    pub shortcuts: BTreeMap<String, Keys>,
 }
 
 impl Default for SettingsFile {
@@ -87,6 +110,7 @@ impl Default for SettingsFile {
             gamma: 0,
             hue: 0,
             zoom: 100,
+            shortcuts: shortcuts::defaults(),
         }
     }
 }
@@ -106,6 +130,8 @@ impl SettingsFile {
             *value = (*value).clamp(-100, 100);
         }
         self.zoom = self.zoom.clamp(25, 400);
+        // Liste complète dans le fichier : toutes les actions sont visibles et modifiables
+        self.shortcuts = shortcuts::merged(&self.shortcuts);
         self
     }
 
@@ -162,6 +188,8 @@ pub struct SettingsRust {
     gamma: i32,
     hue: i32,
     zoom: i32,
+    shortcuts: BTreeMap<String, Keys>,
+    resolved_shortcuts: Resolved,
 }
 
 impl From<SettingsFile> for SettingsRust {
@@ -184,6 +212,8 @@ impl From<SettingsFile> for SettingsRust {
             gamma: f.gamma,
             hue: f.hue,
             zoom: f.zoom,
+            resolved_shortcuts: shortcuts::resolve(&f.shortcuts),
+            shortcuts: f.shortcuts,
         }
     }
 }
@@ -208,6 +238,7 @@ impl From<&SettingsRust> for SettingsFile {
             gamma: s.gamma,
             hue: s.hue,
             zoom: s.zoom,
+            shortcuts: s.shortcuts.clone(),
         }
     }
 }
@@ -219,6 +250,18 @@ impl Default for SettingsRust {
 }
 
 impl qobject::Settings {
+    pub fn keys(&self, action: &QString) -> QStringList {
+        let mut list = QList::<QString>::default();
+        for key in self.rust().resolved_shortcuts.keys.get(&action.to_string()).into_iter().flatten() {
+            list.append(QString::from(key));
+        }
+        QStringList::from(&list)
+    }
+
+    pub fn shortcut_warnings(&self) -> QString {
+        QString::from(&self.rust().resolved_shortcuts.warnings.join("\n"))
+    }
+
     pub fn save(&self) {
         let file = SettingsFile::from(self.rust()).sanitized();
         if let Err(e) = file.store(&settings_path()) {
@@ -258,6 +301,7 @@ mod tests {
             gamma: 0,
             hue: -3,
             zoom: 150,
+            shortcuts: shortcuts::merged(&BTreeMap::from([("capture".to_string(), Keys::One("F9".into()))])),
         };
         settings.store(&path).unwrap(); // crée aussi le dossier
         assert_eq!(SettingsFile::load(&path), settings);

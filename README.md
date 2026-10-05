@@ -87,6 +87,28 @@ Lumen apparaît alors dans le lanceur d'applications, avec son icône, et dans
 clic droit › **Ouvrir avec** du gestionnaire de fichiers. `lumen fichier.mkv` ou
 `lumen dossier/` fonctionnent aussi dans un terminal.
 
+Sous COSMIC, la recherche de fenêtres peut afficher « unknown » et une icône générique
+juste après la première installation : son moteur (`pop-launcher`) a chargé la liste des
+applications avant. `pkill -x pop-launcher` (relancé automatiquement) ou une reconnexion règle ça.
+
+---
+
+## Raccourcis personnalisables
+
+Les touches se règlent dans la section `[raccourcis]` de `~/.config/lumen/settings.toml`
+(Lumen fermé). La liste complète des actions y est écrite à la première fermeture de Lumen.
+
+```toml
+[raccourcis]
+plein_ecran = ["F", "Return"]   # plusieurs touches possibles
+capture = "F9"                  # notation Qt : Space, Ctrl+O, F6, PgDown…
+muet = ""                       # chaîne vide : raccourci désactivé
+```
+
+Une touche choisie l'emporte sur la même touche attribuée par défaut à une autre action.
+Deux choix en conflit, ou une action inconnue, sont signalés à l'écran au démarrage.
+Échap n'est pas personnalisable (il ferme menus, playlist et plein écran).
+
 ---
 
 ## Données et paramètres
