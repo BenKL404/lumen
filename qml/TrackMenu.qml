@@ -27,7 +27,7 @@ Rectangle {
     height: content.implicitHeight + 20
     radius: theme.radius
     color: theme.surface
-    border.color: Qt.rgba(1, 1, 1, 0.06)
+    border.color: menu.theme.subtle
 
     // Absorbe les clics : ne pas mettre en pause en cliquant dans le menu
     MouseArea { anchors.fill: parent }
@@ -128,7 +128,7 @@ Rectangle {
             visible: !menu.isSub
             width: parent.width
             height: 1
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: menu.theme.raised
         }
         Entry {
             theme: menu.theme
@@ -142,7 +142,7 @@ Rectangle {
             visible: menu.isSub
             width: parent.width
             height: 1
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: menu.theme.raised
         }
 
         Entry {

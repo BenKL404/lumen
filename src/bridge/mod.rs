@@ -8,5 +8,6 @@ pub mod screen_guard;
 pub mod settings;
 pub mod shaders;
 pub mod shortcuts;
+pub mod themes;
 pub mod utils;
 pub mod video;

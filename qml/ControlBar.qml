@@ -200,7 +200,7 @@ Rectangle {
                         width: abText.implicitWidth + 12
                         height: 20
                         radius: 4
-                        color: abArea.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        color: abArea.containsMouse ? bar.theme.raised : "transparent"
                         border.color: bar.theme.accent
 
                         Text {

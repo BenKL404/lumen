@@ -131,6 +131,26 @@ Deux choix en conflit, ou une action inconnue, sont signalés à l'écran au dé
 
 ---
 
+## Thèmes et skins
+
+Préférences (F5) › **Apparence** : thème sombre, clair ou OLED noir, couleur d'accent, taille de
+l'interface. Un **skin** est un fichier JSON dans `~/.config/lumen/skins/` (un exemple, `nord.json`,
+y est créé par le bouton « Ouvrir le dossier ») ; il part d'un thème et redéfinit des couleurs :
+
+```json
+{
+  "name": "Nord",
+  "base": "dark",
+  "colors": { "background": "#2E3440", "chrome": "#3B4252", "text": "#ECEFF4", "accent": "#88C0D0" }
+}
+```
+
+Couleurs redéfinissables : `background`, `chrome`, `menu`, `surface`, `surfaceHover`, `border`,
+`text`, `muted`, `track`, `subtle`, `raised`, `strong`, `field`, `shade`, `divider`, `accent`
+(format `#RRGGBB` ou `#AARRGGBB`). Un skin se partage en copiant simplement son fichier.
+
+---
+
 ## Données et paramètres
 
 | Fichier | Contenu |

@@ -79,7 +79,7 @@ Rectangle {
 
         height: 34
         radius: 6
-        color: Qt.rgba(0, 0, 0, 0.25)
+        color: panel.theme.field
         border.color: input.activeFocus ? panel.theme.accent : panel.theme.border
 
         TextInput {
@@ -132,7 +132,7 @@ Rectangle {
                 id: searchLabel
                 anchors.centerIn: parent
                 text: "Rechercher"
-                color: "#1A1206"
+                color: panel.theme.onAccent
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
             }
@@ -259,7 +259,7 @@ Rectangle {
                     width: buttonText.implicitWidth + 24
                     height: 32
                     radius: 6
-                    color: buttonArea.containsMouse ? panel.theme.surfaceHover : Qt.rgba(1, 1, 1, 0.06)
+                    color: buttonArea.containsMouse ? panel.theme.surfaceHover : panel.theme.subtle
                     border.color: panel.theme.border
                     Text {
                         id: buttonText

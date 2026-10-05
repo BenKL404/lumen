@@ -13,6 +13,7 @@ fn main() {
     }
 
     use_desktop_portal();
+    apply_ui_scale();
 
     // Doit être appelé avant la création de la fenêtre :
     // force le rendu OpenGL et enregistre le composant vidéo pour QML.
@@ -56,6 +57,18 @@ fn main() {
 
     if let Some(app) = app.as_mut() {
         app.exec();
+    }
+}
+
+/// Taille de l'interface choisie dans les préférences (QT_SCALE_FACTOR), sauf si
+/// l'utilisateur a déjà réglé la variable lui-même.
+fn apply_ui_scale() {
+    if std::env::var_os("QT_SCALE_FACTOR").is_some() {
+        return;
+    }
+    let scale = bridge::settings::SettingsFile::load(&bridge::settings::settings_path()).ui_scale;
+    if scale != 100 {
+        std::env::set_var("QT_SCALE_FACTOR", format!("{:.2}", scale as f64 / 100.0));
     }
 }
 

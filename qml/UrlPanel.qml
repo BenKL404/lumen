@@ -54,7 +54,7 @@ Rectangle {
         anchors { left: parent.left; right: openButton.left; top: title.bottom; leftMargin: 20; rightMargin: 10; topMargin: 16 }
         height: 36
         radius: 6
-        color: Qt.rgba(0, 0, 0, 0.25)
+        color: panel.theme.field
         border.color: field.activeFocus ? panel.theme.accent : panel.theme.border
 
         TextInput {
@@ -90,7 +90,7 @@ Rectangle {
             id: openLabel
             anchors.centerIn: parent
             text: "Ouvrir"
-            color: "#1A1206"
+            color: panel.theme.onAccent
             font.pixelSize: 13
             font.weight: Font.DemiBold
         }

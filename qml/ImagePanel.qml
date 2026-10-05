@@ -119,7 +119,7 @@ Rectangle {
                 height: 28
                 radius: 6
                 opacity: panel.modified ? 1 : 0.4
-                color: resetArea.containsMouse && panel.modified ? panel.theme.surfaceHover : Qt.rgba(1, 1, 1, 0.05)
+                color: resetArea.containsMouse && panel.modified ? panel.theme.surfaceHover : panel.theme.subtle
 
                 Row {
                     id: resetRow

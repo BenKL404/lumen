@@ -68,7 +68,7 @@ Rectangle {
     Rectangle {
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width: panel.attached ? 2 : 1
-        color: panel.attached ? "#000000" : panel.theme.border
+        color: panel.attached ? panel.theme.divider : panel.theme.border
         z: 1
     }
 
@@ -148,8 +148,8 @@ Rectangle {
             visible: panel.matches(index)
             height: visible ? 30 : 0
             radius: 6
-            color: isSelected ? Qt.rgba(1, 1, 1, 0.10)
-                 : rowArea.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+            color: isSelected ? panel.theme.raised
+                 : rowArea.containsMouse ? panel.theme.subtle : "transparent"
 
             // Repère du fichier en cours
             Rectangle {
@@ -229,7 +229,7 @@ Rectangle {
             height: 24
             radius: 4
             opacity: enabled ? 1 : 0.35
-            color: tbArea.pressed ? Qt.rgba(1, 1, 1, 0.16) : tbArea.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.05)
+            color: tbArea.pressed ? panel.theme.strong : tbArea.containsMouse ? panel.theme.raised : panel.theme.subtle
 
             Icon {
                 anchors.centerIn: parent
@@ -280,7 +280,7 @@ Rectangle {
             anchors { left: parent.left; leftMargin: 8; right: searchButton.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
             height: 26
             radius: 4
-            color: Qt.rgba(0, 0, 0, 0.25)
+            color: panel.theme.field
             border.color: search.activeFocus ? panel.theme.accent : panel.theme.border
 
             TextInput {
