@@ -23,12 +23,12 @@ Rectangle {
     property string search: ""
 
     readonly property var categories: [
-        { id: "general", label: "Général", icon: "settings" },
-        { id: "lecture", label: "Lecture", icon: "film" },
-        { id: "video", label: "Vidéo", icon: "monitor" },
-        { id: "audio", label: "Audio", icon: "audio-lines" },
-        { id: "sous-titres", label: "Sous-titres", icon: "captions" },
-        { id: "raccourcis", label: "Raccourcis", icon: "keyboard" }
+        { id: "general", label: "Général" },
+        { id: "lecture", label: "Lecture" },
+        { id: "video", label: "Vidéo" },
+        { id: "audio", label: "Audio" },
+        { id: "sous-titres", label: "Sous-titres" },
+        { id: "raccourcis", label: "Raccourcis" }
     ]
 
     // « FR, en ;; » -> « fr,en » (même règle que language_list dans settings.rs)
@@ -192,15 +192,8 @@ Rectangle {
                     // Catégorie en cours : icône et texte en orange suffisent, sans fond
                     color: !current && categoryArea.containsMouse ? panel.theme.surfaceHover : "transparent"
 
-                    Icon {
-                        id: categoryIcon
-                        anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                        name: categoryItem.modelData.icon
-                        size: 16
-                        color: categoryItem.current ? panel.theme.accent : panel.theme.muted
-                    }
                     Text {
-                        anchors { left: categoryIcon.right; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                        anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
                         text: categoryItem.modelData.label
                         color: categoryItem.current ? panel.theme.accent : panel.theme.text
                         font.pixelSize: 13
