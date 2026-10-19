@@ -1346,6 +1346,15 @@ Window {
             root.toggleAudioPanel()
         }
         onSearchSubtitlesRequested: root.openSubtitleSearch()
+        generating: transcriber.busy
+        generationProgress: transcriber.progress
+        onGenerateSubtitlesRequested: {
+            trackMenu.visible = false
+            if (transcriber.busy)
+                transcriber.cancel()
+            else
+                root.generateSubtitles()
+        }
     }
 
     AudioPanel {

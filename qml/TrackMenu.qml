@@ -14,6 +14,10 @@ Rectangle {
     signal addSubtitleRequested()
     signal audioSettingsRequested()
     signal searchSubtitlesRequested()
+    // Sous-titres par reconnaissance vocale : lancer, ou annuler (génération en cours)
+    signal generateSubtitlesRequested()
+    property bool generating: false
+    property int generationProgress: 0
 
     function select(id) {
         video.command(["set", isSub ? "sid" : "aid", String(id)])
@@ -166,6 +170,13 @@ Rectangle {
                 visible: menu.isSub
                 label: "Rechercher en ligne…"
                 onClicked: menu.searchSubtitlesRequested()
+            }
+            Entry {
+                theme: menu.theme
+                visible: menu.isSub
+                label: menu.generating ? "Annuler la génération (" + menu.generationProgress + " %)"
+                                       : "Générer (reconnaissance vocale)…"
+                onClicked: menu.generateSubtitlesRequested()
             }
 
             Item {
