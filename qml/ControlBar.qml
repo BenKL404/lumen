@@ -23,10 +23,10 @@ Rectangle {
     // Fenêtre étroite : les boutons secondaires se masquent par paliers (toujours accessibles
     // par le clic droit). Seuils calculés sur la largeur des boutons (36 px + 2 d'espacement).
     // 0 : tout ; 1 : sans aléatoire ni répétition ; 2 : sans audio, sous-titres ni réglages d'image ;
-    // 3 : sans stop ni ouvrir ; 4 : sans durée totale
+    // 3 : sans stop ; 4 : sans durée totale. Ouvrir : lecture sans vidéo, touche O, clic droit
     readonly property int compact: {
         const w = width - 24
-        return w >= 684 ? 0 : w >= 608 ? 1 : w >= 494 ? 2 : w >= 418 ? 3 : 4
+        return w >= 646 ? 0 : w >= 570 ? 1 : w >= 456 ? 2 : w >= 418 ? 3 : 4
     }
 
     // Infos techniques ; une pochette d'album n'est pas une vraie piste vidéo
@@ -155,7 +155,6 @@ Rectangle {
                 IconButton { theme: bar.theme; icon: "stop"; filled: true; iconSize: 16; visible: bar.compact < 3; enabled: bar.video.hasMedia; onClicked: bar.stopRequested() }
                 IconButton { theme: bar.theme; icon: "skip-back"; filled: true; enabled: bar.hasPrevious; onClicked: bar.previousRequested() }
                 IconButton { theme: bar.theme; icon: "skip-forward"; filled: true; enabled: bar.hasNext; onClicked: bar.nextRequested() }
-                IconButton { theme: bar.theme; icon: "folder-open"; visible: bar.compact < 3; onClicked: bar.openRequested() }
                 // Ordre de lecture, à côté des boutons de lecture
                 IconButton { theme: bar.theme; icon: "shuffle"; visible: bar.compact < 1; active: bar.shuffle; onClicked: bar.shuffleRequested() }
                 IconButton {
