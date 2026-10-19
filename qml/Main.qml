@@ -88,20 +88,19 @@ Window {
     readonly property bool hasPrevious: playlist.previousIndex >= 0
     readonly property bool hasNext: playlist.nextIndex >= 0
 
-    readonly property var menuEntries: [
+    // Menu « Lumen ⌄ » : ouverture, puis les mêmes sous-menus que le clic droit (lecture, audio,
+    // sous-titres, vidéo…), puis l'affichage et les fenêtres. Construit à l'ouverture.
+    function menuEntries() {
+        return [
         { label: "Ouvrir un fichier…", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
         { label: "Ouvrir un dossier…", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
         { label: "Ouvrir une vidéo en ligne…", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
         { label: "Chaînes IPTV", enabled: settings.iptvList !== "", action: () => root.openList(settings.iptvList) },
         { label: "Ajouter des sous-titres…", action: () => subtitleDialog.open() },
         { separator: true },
-        { label: "Lecture / pause", shortcut: root.keyLabel("lecture_pause"), action: () => video.togglePause() },
-        { label: "Arrêter", action: () => root.stop() },
-        { label: "Capture d'écran", shortcut: root.keyLabel("capture"), action: () => root.screenshot() },
+    ].concat(contextEntries().filter(e => e.submenu !== undefined), [
         { separator: true },
         { label: "Playlist", shortcut: root.keyLabel("playlist"), checked: playlistPanel.open, action: () => root.togglePlaylist() },
-        { label: "Lecture aléatoire", shortcut: root.keyLabel("aleatoire"), checked: playlist.shuffle, action: () => root.toggleShuffle() },
-        { label: "Répéter : " + root.repeatNames[playlist.repeatMode], shortcut: root.keyLabel("repetition"), checked: playlist.repeatMode !== 0, action: () => root.cycleRepeat() },
         { label: "Plein écran", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },
         { label: "Mode mini", shortcut: root.keyLabel("mode_mini"), checked: root.mini, action: () => root.toggleMini() },
         { label: "Toujours au premier plan", checked: root.pinned, action: () => root.pinned = !root.pinned },
@@ -110,7 +109,8 @@ Window {
         { label: "Raccourcis clavier…", shortcut: root.keyLabel("raccourcis"), action: () => root.toggleShortcutsPanel() },
         { separator: true },
         { label: "Quitter", shortcut: root.keyLabel("quitter"), action: () => root.close() }
-    ]
+    ])
+    }
 
     // Paramètres de la session précédente, appliqués une fois la fenêtre créée
     Component.onCompleted: {
@@ -862,7 +862,10 @@ Window {
         format: !video.hasMedia ? "" : utils.isOnline(root.currentUrl) ? "WEB" : utils.fileExtension(root.currentUrl)
         title: video.hasMedia ? root.mediaName : "Lumen"
         pinned: root.pinned
-        onMenuRequested: (anchor) => appMenu.popup(anchor, false)
+        onMenuRequested: (anchor) => {
+            appMenu.entries = root.menuEntries()
+            appMenu.popup(anchor, false)
+        }
         onPinToggled: root.pinned = !root.pinned
         onMaximizeToggled: root.toggleMaximized()
     }
@@ -1369,7 +1372,6 @@ Window {
     AppMenu {
         id: appMenu
         theme: root.theme
-        entries: root.menuEntries
     }
 
     AppMenu {
