@@ -164,9 +164,8 @@ Rectangle {
             width: ListView.view.width
             visible: panel.matches(index)
             height: visible ? 30 : 0
-            radius: 6
-            color: isSelected ? panel.theme.raised
-                 : rowArea.containsMouse ? panel.theme.subtle : "transparent"
+            // Pas de fond : le texte seul signale la ligne en cours (accent), choisie (gras) ou survolée
+            color: "transparent"
 
             // Repère du fichier en cours
             Rectangle {
@@ -188,8 +187,10 @@ Rectangle {
             Text {
                 anchors { left: number.right; leftMargin: 6; right: durationText.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
                 text: panel.playlist.titles[row.index] || panel.utils.fileName(row.modelData)
-                color: row.isCurrent ? panel.theme.accent : panel.theme.text
+                color: row.isCurrent ? panel.theme.accent
+                     : row.isSelected || rowArea.containsMouse ? panel.theme.text : panel.theme.muted
                 font.pixelSize: 13
+                font.weight: row.isSelected ? Font.DemiBold : Font.Normal
                 elide: Text.ElideMiddle
             }
             Text {

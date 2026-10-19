@@ -12,6 +12,7 @@ Rectangle {
     property var playlist
     property var image
     property var sound
+    property var video
     property var history
     property var utils
 
@@ -28,6 +29,7 @@ Rectangle {
         { id: "video", label: "Vidéo" },
         { id: "audio", label: "Audio" },
         { id: "sous-titres", label: "Sous-titres" },
+        { id: "en-ligne", label: "En ligne" },
         { id: "apparence", label: "Apparence" },
         { id: "extensions", label: "Extensions" },
         { id: "raccourcis", label: "Raccourcis" }
@@ -42,12 +44,20 @@ Rectangle {
         return categories.find(c => c.id === id).label
     }
 
-    // Types : toggle, choice (options), slider (min, max, unit), text (placeholder), button, keys
+    // Types : toggle, choice (options), slider (min, max, unit, step, format), text (placeholder), button, keys
     // Relu à l'ouverture du dossier ou sur « Actualiser » (fichiers ajoutés entre-temps)
     property int extensionsVersion: 0
 
     readonly property var rows: {
         const s = settings, a = app, img = image, snd = sound, pl = playlist
+        const v = video
+        const signed = (x, digits, unit) => (x > 0 ? "+" : "") + x.toFixed(digits).replace(".", ",") + unit
+        const bandLabels = ["31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"]
+        const bandRow = (i) => ({
+            cat: "audio", label: "Égaliseur · " + bandLabels[i], type: "slider", min: -12, max: 12, neutral: 0, unit: " dB",
+            get: () => snd.equalizer[i] || 0,
+            set: (x) => { const gains = Array.from(snd.equalizer); gains[i] = x; snd.equalizer = gains }
+        })
         const imageRow = (key, label, min, max, neutral, unit) => ({
             cat: "video", label: label, type: "slider", min: min, max: max, neutral: neutral, unit: unit || "",
             get: () => img[key], set: (v) => img[key] = v
@@ -73,6 +83,9 @@ Rectangle {
               get: () => pl.repeatMode, set: (v) => pl.setRepeat(v) },
             { cat: "lecture", label: "Lecture aléatoire", desc: "Chaque fichier de la playlist une fois, dans le désordre",
               type: "toggle", get: () => pl.shuffle, set: (v) => pl.setShuffleEnabled(v) },
+            { cat: "lecture", label: "Vitesse de lecture", desc: "Fichier en cours ; normale : Retour arrière", type: "slider",
+              min: 0.25, max: 4, neutral: 1, step: 0.05, format: (x) => "×" + x.toFixed(2).replace(/\.?0+$/, "").replace(".", ","),
+              get: () => v.speed, set: (x) => v.speed = x },
             { cat: "lecture", label: "Saut court", desc: "Flèches gauche et droite", type: "slider", min: 1, max: 60, unit: " s",
               get: () => s.seekShort, set: (v) => s.seekShort = v },
             { cat: "lecture", label: "Saut long", desc: "Ctrl + flèches", type: "slider", min: 5, max: 300, unit: " s",
@@ -96,22 +109,40 @@ Rectangle {
             { cat: "video", label: "Réglages d'image", desc: "Revenir aux valeurs neutres", type: "button", button: "Réinitialiser",
               action: () => { ["brightness", "contrast", "saturation", "gamma", "hue", "sharpness"].forEach(k => img[k] = 0); img.zoom = 100 } },
 
+            { cat: "audio", label: "Volume", desc: "Au-delà de 100 % : amplifié", type: "slider", min: 0, max: 130, neutral: 100, unit: " %",
+              get: () => Math.round(v.volume), set: (x) => v.volume = x },
+            { cat: "audio", label: "Muet", type: "toggle", get: () => v.muted, set: (x) => v.muted = x },
             { cat: "audio", label: "Normaliser le volume", desc: "Dialogues plus audibles, explosions moins fortes",
               type: "toggle", get: () => snd.normalize, set: (v) => snd.normalize = v },
-            { cat: "audio", label: "Égaliseur", desc: "Réglage fin bande par bande : touche E", type: "choice",
+            { cat: "audio", label: "Égaliseur", desc: "Préréglage ; bandes ci-dessous, ou touche E", type: "choice",
               options: panel.utils.equalizerPresets().map(name => ({ label: name, value: JSON.stringify(Array.from(panel.utils.equalizerPreset(name))) })),
               get: () => JSON.stringify(snd.equalizer), set: (v) => snd.equalizer = JSON.parse(v) },
+            bandRow(0), bandRow(1), bandRow(2), bandRow(3), bandRow(4),
+            bandRow(5), bandRow(6), bandRow(7), bandRow(8), bandRow(9),
+            { cat: "audio", label: "Décalage audio", desc: "Fichier en cours : son en avance (−) ou en retard (+)", type: "slider",
+              min: -10, max: 10, neutral: 0, step: 0.1, format: (x) => signed(x, 1, " s"),
+              get: () => snd.delay, set: (x) => snd.delay = x },
             { cat: "audio", label: "Langues audio préférées", desc: "Codes séparés par des virgules, par ordre de préférence",
               type: "text", placeholder: "fr,en", get: () => s.audioLanguages, set: (v) => s.audioLanguages = panel.languageList(v) },
 
             { cat: "sous-titres", label: "Langues de sous-titres préférées", desc: "Codes séparés par des virgules ; vide : selon le fichier",
               type: "text", placeholder: "fr,en", get: () => s.subtitleLanguages, set: (v) => s.subtitleLanguages = panel.languageList(v) },
+            { cat: "sous-titres", label: "Décalage des sous-titres", desc: "Fichier en cours : en avance (−) ou en retard (+)", type: "slider",
+              min: -10, max: 10, neutral: 0, step: 0.1, format: (x) => signed(x, 1, " s"),
+              get: () => v.subDelay, set: (x) => v.subDelay = x },
             { cat: "sous-titres", label: "Clé d'API OpenSubtitles", desc: "Pour la recherche en ligne (Ctrl+J) ; gratuite sur opensubtitles.com",
               type: "text", placeholder: "Coller la clé ici", get: () => s.opensubtitlesApiKey, set: (v) => s.opensubtitlesApiKey = v.trim() },
             { cat: "sous-titres", label: "Obtenir une clé", desc: "Compte gratuit › profil › API consumers", type: "button", button: "Ouvrir le site",
               action: () => Qt.openUrlExternally("https://www.opensubtitles.com/consumers") },
             { cat: "sous-titres", label: "Taille des sous-titres", type: "slider", min: 50, max: 300, neutral: 100, unit: " %",
               get: () => s.subtitleScale, set: (v) => s.subtitleScale = v },
+
+            { cat: "en-ligne", label: "Liste de chaînes IPTV", desc: "Lien M3U, ou adresse créée par un compte Xtream Codes (Ctrl+U)",
+              type: "text", placeholder: "http://…/liste.m3u", get: () => s.iptvList, set: (x) => s.iptvList = x.trim() },
+            { cat: "en-ligne", label: "Chaînes IPTV", desc: "Charge la liste dans la playlist", type: "button", button: "Charger",
+              action: () => { if (s.iptvList !== "") { panel.closeRequested(); a.openList(s.iptvList) } } },
+            { cat: "en-ligne", label: "Vidéos en ligne", desc: "YouTube, directs, sites vidéo (via yt-dlp) : Ctrl+U ou Ctrl+V",
+              type: "button", button: "Ouvrir…", action: () => a.openUrlPanel() },
 
             { cat: "apparence", label: "Thème", desc: "Sombre, clair, OLED, ou un skin de ton dossier de skins", type: "choice",
               options: JSON.parse(panel.utils.themes()).map(t => ({ label: t.label, value: t.id })),
@@ -452,13 +483,18 @@ Rectangle {
                                 to: row.r.max - row.r.min
                                 value: row.r.get() - row.r.min
                                 origin: (row.r.neutral !== undefined ? row.r.neutral : row.r.min) - row.r.min
-                                onMoved: (v) => { row.r.set(Math.round(v + row.r.min)); panel.changed() }
+                                onMoved: (v) => {
+                                    const step = row.r.step || 1
+                                    row.r.set(Math.round((v + row.r.min) / step) * step)
+                                    panel.changed()
+                                }
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 52
                                 horizontalAlignment: Text.AlignRight
-                                text: (row.r.unit === "" && row.r.min < 0 && row.r.get() > 0 ? "+" : "") + row.r.get() + row.r.unit
+                                text: row.r.format ? row.r.format(row.r.get())
+                                      : (row.r.unit === "" && row.r.min < 0 && row.r.get() > 0 ? "+" : "") + row.r.get() + row.r.unit
                                 color: row.r.neutral !== undefined && row.r.get() !== row.r.neutral ? panel.theme.accent : panel.theme.text
                                 font.pixelSize: 12
                                 font.family: "monospace"

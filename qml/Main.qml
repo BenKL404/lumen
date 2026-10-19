@@ -1450,6 +1450,7 @@ Window {
         playlist: playlist
         image: root.image
         sound: root.sound
+        video: video
         history: history
         utils: utils
         onCloseRequested: visible = false
