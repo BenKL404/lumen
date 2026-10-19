@@ -59,6 +59,11 @@ Item {
         property var model: []
         signal triggered(var entry, Item item)
         signal hoveredEntry(var entry, Item item)
+        // Ligne survolée : une seule à la fois. Dans une liste qui défile, Qt ne signale pas
+        // toujours la sortie de la souris, et plusieurs lignes resteraient surlignées.
+        property Item hoveredItem: null
+        onVisibleChanged: hoveredItem = null
+        HoverHandler { onHoveredChanged: if (!hovered) panel.hoveredItem = null }
 
         width: 290
         // Calculée depuis les entrées (et non depuis la colonne) : exacte dès l'ouverture,
@@ -112,7 +117,7 @@ Item {
                         anchors.fill: parent
                         radius: 6
                         opacity: entry.isEnabled ? 1 : 0.4
-                        color: entryArea.containsMouse && entry.isEnabled ? panel.theme.surfaceHover : "transparent"
+                        color: panel.hoveredItem === entry && entry.isEnabled ? panel.theme.surfaceHover : "transparent"
 
                         // Coche, ou icône de l'entrée
                         Icon {
@@ -156,7 +161,14 @@ Item {
                             anchors.fill: parent
                             enabled: !entry.isSeparator && entry.isEnabled
                             hoverEnabled: true
-                            onContainsMouseChanged: if (containsMouse) panel.hoveredEntry(entry.modelData, entry)
+                            onContainsMouseChanged: {
+                                if (containsMouse) {
+                                    panel.hoveredItem = entry
+                                    panel.hoveredEntry(entry.modelData, entry)
+                                } else if (panel.hoveredItem === entry) {
+                                    panel.hoveredItem = null
+                                }
+                            }
                             onClicked: panel.triggered(entry.modelData, entry)
                         }
                     }
