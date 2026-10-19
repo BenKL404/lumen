@@ -43,7 +43,8 @@ void lumen_open_file(const QQmlApplicationEngine &engine, const QString &path)
         return;
     // Accepte un chemin (relatif ou absolu) comme une URL déjà formée
     const QUrl url = QUrl::fromUserInput(path, QDir::currentPath(), QUrl::AssumeLocalFile);
-    QMetaObject::invokeMethod(window, "openUrl", Q_ARG(QVariant, QVariant(url)));
+    // openUrl(url, direct) : un appel QML via le méta-objet doit donner tous les paramètres
+    QMetaObject::invokeMethod(window, "openUrl", Q_ARG(QVariant, QVariant(url)), Q_ARG(QVariant, QVariant(false)));
 }
 
 void lumen_snapshot(const QQmlApplicationEngine &engine, const QString &path, int delayMs)
