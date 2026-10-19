@@ -52,6 +52,11 @@ Window {
     readonly property bool anyPopupOpen: trackMenu.visible || imagePanel.visible || audioPanel.visible
         || shortcutsPanel.visible || urlPanel.visible || preferencesPanel.visible || subtitleSearchPanel.visible
         || appMenu.visible || contextMenu.visible
+    // Fenêtre modale au centre : la vidéo ne réagit plus (souris, molette, raccourcis)
+    // jusqu'à sa fermeture, sauf Échap et la touche qui l'a ouverte
+    readonly property bool modalOpen: urlPanel.visible || subtitleSearchPanel.visible
+        || preferencesPanel.visible || shortcutsPanel.visible
+    readonly property var modalKeys: ["preferences", "raccourcis", "ouvrir_url", "chercher_sous_titres"]
     property bool pinned: false
     property bool wasMaximized: false
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -1257,6 +1262,7 @@ Window {
         enabled: root.anyPopupOpen || (root.immersive && playlistPanel.open)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePopups()
+        onWheel: (wheel) => wheel.accepted = root.anyPopupOpen
     }
 
     // ------------------------------------------------------------- Playlist
@@ -1338,6 +1344,21 @@ Window {
         theme: root.theme
     }
 
+    // Fenêtres modales : voile qui assombrit le reste et capte clics et molette
+    // (un clic à côté ferme la fenêtre, sans toucher à la vidéo)
+    Rectangle {
+        anchors.fill: parent
+        visible: root.modalOpen
+        color: Qt.rgba(0, 0, 0, 0.45)
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
+            onClicked: root.closePopups()
+            onWheel: (wheel) => wheel.accepted = true
+        }
+    }
+
     UrlPanel {
         id: urlPanel
         anchors.centerIn: parent
@@ -1385,13 +1406,6 @@ Window {
         onDownloadRequested: (result) => subtitleSearch.download(result.fileId, result.language, root.currentUrl)
     }
 
-    // Préférences : fenêtre au centre, sur un voile qui assombrit le reste
-    Rectangle {
-        anchors.fill: parent
-        visible: preferencesPanel.visible
-        color: Qt.rgba(0, 0, 0, 0.45)
-        MouseArea { anchors.fill: parent; onClicked: preferencesPanel.visible = false }
-    }
     PreferencesPanel {
         id: preferencesPanel
         anchors.centerIn: parent
@@ -1565,6 +1579,7 @@ Window {
             required property string modelData
             // Relues après « Recharger » (shortcutsVersion change)
             sequences: { settings.shortcutsVersion; return settings.keys(modelData) }
+            enabled: !root.modalOpen || root.modalKeys.includes(modelData)
             onActivated: root.keyActions[modelData]()
         }
     }
