@@ -254,6 +254,9 @@ Window {
                 { separator: true },
                 { label: "Ajouter un fichier…", action: () => subtitleDialog.open() },
                 { label: "Rechercher en ligne…", icon: "search", shortcut: root.keyLabel("chercher_sous_titres"), action: () => root.openSubtitleSearch() },
+                transcriber.busy
+                    ? { label: "Annuler la génération (" + transcriber.progress + " %)", icon: "x", action: () => transcriber.cancel() }
+                    : { label: "Générer les sous-titres (reconnaissance vocale)", icon: "audio-lines", action: () => root.generateSubtitles() },
                 { label: "Décaler de −0,1 s", shortcut: root.keyLabel("decalage_sous_titres_moins"), action: () => root.shiftSubDelay(-0.1) },
                 { label: "Décaler de +0,1 s", shortcut: root.keyLabel("decalage_sous_titres_plus"), action: () => root.shiftSubDelay(0.1) },
                 { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
@@ -1406,6 +1409,32 @@ Window {
             root.openList(playlist.xtreamUrl(server, user, password))
         }
         onCloseRequested: visible = false
+    }
+
+    // Sous-titres générés par reconnaissance vocale (whisper.cpp, sur l'ordinateur)
+    Transcriber {
+        id: transcriber
+        onProgressChanged: if (busy) root.osd(stage + " : " + progress + " %", 4000)
+        onStageChanged: if (busy) root.osd(stage + "…", 4000)
+        onFinished: (path) => {
+            video.command(["sub-add", path, "select"])
+            root.osd("Sous-titres générés : " + utils.fileName(path), 5000)
+        }
+        onFailed: (message) => root.osd(message, 6000)
+    }
+
+    function generateSubtitles() {
+        if (!video.hasMedia)
+            return
+        if (!transcriber.available()) {
+            osd("Installer whisper.cpp d'abord : scripts/install-whisper.sh", 8000)
+            return
+        }
+        if (utils.isOnline(currentUrl)) {
+            osd("Vidéo en ligne : utiliser les sous-titres de YouTube (menu Sous-titres)", 6000)
+            return
+        }
+        transcriber.start(currentUrl, settings.whisperLanguage, settings.whisperModel)
     }
 
     SubtitleSearch {

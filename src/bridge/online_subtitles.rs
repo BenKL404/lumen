@@ -204,7 +204,7 @@ fn download(key: &str, file_id: i64, target: &Path) -> Result<PathBuf, String> {
 
 /// Écrit à côté de la vidéo, ou dans ~/.local/share/lumen/subtitles si c'est impossible
 /// (dossier en lecture seule, vidéo en ligne)
-fn write_subtitle(target: &Path, bytes: &[u8]) -> Result<PathBuf, String> {
+pub fn write_subtitle(target: &Path, bytes: &[u8]) -> Result<PathBuf, String> {
     let fallback = data_dir().join("subtitles").join(target.file_name().unwrap_or_default());
     for path in [target.to_path_buf(), fallback] {
         let path = unique_path(&path);

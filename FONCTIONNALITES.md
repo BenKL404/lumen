@@ -188,6 +188,7 @@ Toutes ces touches se changent dans **Préférences › Raccourcis** (Échap res
 - Sous-titres de YouTube, y compris ceux **générés automatiquement** et leurs traductions, dans les langues préférées.
 - Chaînes IPTV : listes M3U (lien ou fichier) et comptes Xtream Codes, chaînes nommées dans la playlist.
 - Recherche automatique de sous-titres sur Internet.
+- **Sous-titres générés par reconnaissance vocale** (whisper.cpp, sur l'ordinateur) pour n'importe quelle vidéo locale, avec avancement affiché et annulation.
 - Système d'extensions pour ajouter des fonctions.
 - Thèmes et apparence personnalisables.
 - Installation facile : AppImage publiée, paquets Flatpak et AUR prêts (`packaging/`).

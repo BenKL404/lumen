@@ -165,6 +165,32 @@ défaut) et la langue d'origine de la vidéo.
 
 ---
 
+## Sous-titres générés (reconnaissance vocale)
+
+Lumen peut créer les sous-titres d'une vidéo de l'ordinateur en écoutant ses dialogues, avec
+[whisper.cpp](https://github.com/ggml-org/whisper.cpp). Tout se fait en local, sans envoyer la
+vidéo sur Internet.
+
+1. Installer whisper.cpp une fois (compilation de quelques minutes, sans sudo) :
+   ```bash
+   scripts/install-whisper.sh      # installe ~/.local/bin/whisper-cli
+   ```
+2. Pendant la lecture : menu **Sous-titres › Générer les sous-titres** (clic droit ou menu Lumen),
+   ou **Préférences › Sous-titres › Générer**.
+
+Le modèle est téléchargé à la première génération dans `~/.local/share/lumen/whisper/`
+(« Rapide » 148 Mo par défaut, « Équilibré » 488 Mo, « Précis » 1,5 Go : Préférences ›
+Sous-titres ; le téléchargement reprend là où il s'est arrêté en cas de coupure). L'avancement s'affiche à l'écran ; le même menu permet d'annuler. Le fichier
+`Vidéo.<langue>.srt` est enregistré à côté de la vidéo (sinon dans
+`~/.local/share/lumen/subtitles/`) et activé tout de suite. La langue parlée est détectée
+automatiquement, ou fixée dans les préférences.
+
+Compter, sur un processeur récent, de quelques minutes à une demi-heure par heure de vidéo selon
+le modèle. Réservé aux fichiers de l'ordinateur ; pour YouTube, ses propres sous-titres
+automatiques sont proposés (voir plus haut).
+
+---
+
 ## IPTV (chaînes en direct)
 
 Lumen ouvre les listes de chaînes **M3U** et les comptes **Xtream Codes** :
@@ -257,6 +283,7 @@ par Lumen (F1) : un script ne reçoit pas les touches, il réagit aux événemen
 | `~/.config/lumen/skins/` | Skins (fichiers JSON) |
 | `~/.config/lumen/scripts/` | Extensions (scripts mpv `.lua`, `.js`) |
 | `~/.local/share/lumen/history.db` | Historique de lecture (positions, pistes, sous-titres, signets) |
+| `~/.local/share/lumen/whisper/` | Modèles de reconnaissance vocale (sous-titres générés) |
 | `~/.local/share/lumen/subtitles/` | Sous-titres téléchargés quand le dossier de la vidéo n'est pas modifiable |
 
 ---
@@ -328,6 +355,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, `loadFailed(raison)`, `scriptMessage(�
 - **Playlist** : épisodes et parties du même nom ajoutés automatiquement, dossiers, aléatoire,
   répétition, glisser-déposer, recherche, durées
 - **Pistes** : audio et sous-titres, sous-titres externes, recherche en ligne (OpenSubtitles),
+  sous-titres générés par reconnaissance vocale (whisper.cpp), sous-titres automatiques de YouTube,
   décalages audio et sous-titres
 - **Navigation** : miniatures au survol, chapitres, signets, boucle A-B
 - **Image et son** : luminosité, contraste…, netteté (AMD CAS), agrandissement (FSR),

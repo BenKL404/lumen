@@ -11,5 +11,6 @@ pub mod settings;
 pub mod shaders;
 pub mod shortcuts;
 pub mod themes;
+pub mod transcribe;
 pub mod utils;
 pub mod video;

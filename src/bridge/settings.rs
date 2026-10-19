@@ -53,6 +53,10 @@ pub mod qobject {
         #[qproperty(QString, opensubtitles_api_key)]
         // Dernière liste de chaînes IPTV ouverte (lien M3U, ou adresse Xtream Codes)
         #[qproperty(QString, iptv_list)]
+        // Sous-titres générés (whisper.cpp) : modèle (« base », « small », « medium ») et
+        // langue parlée (code, vide : détection automatique)
+        #[qproperty(QString, whisper_model)]
+        #[qproperty(QString, whisper_language)]
         // Apparence : thème (« dark », « light », « oled », « skin:<nom> »), accent (#RRGGBB,
         // vide : celui du thème), taille de l'interface en % (au prochain lancement)
         #[qproperty(QString, theme)]
@@ -175,6 +179,10 @@ pub struct SettingsFile {
     pub opensubtitles_api_key: String,
     /// Dernière liste IPTV ouverte (lien M3U ou adresse Xtream Codes, identifiants compris)
     pub iptv_list: String,
+    /// Modèle de reconnaissance vocale : « base », « small » ou « medium » (voir transcribe.rs)
+    pub whisper_model: String,
+    /// Langue parlée dans les vidéos (code), vide : détection automatique
+    pub whisper_language: String,
     /// Thème : « dark », « light », « oled » ou « skin:<fichier> » (voir themes.rs)
     pub theme: String,
     /// Couleur d'accent « #RRGGBB » ; vide : celle du thème
@@ -222,6 +230,8 @@ impl Default for SettingsFile {
             upscaler: 0,
             opensubtitles_api_key: String::new(),
             iptv_list: String::new(),
+            whisper_model: "base".into(),
+            whisper_language: String::new(),
             theme: "dark".into(),
             accent: String::new(),
             ui_scale: 100,
@@ -253,6 +263,10 @@ impl SettingsFile {
         self.sharpness = self.sharpness.clamp(0, 100);
         self.opensubtitles_api_key = self.opensubtitles_api_key.trim().to_string();
         self.iptv_list = self.iptv_list.trim().to_string();
+        if !super::transcribe::MODELS.iter().any(|(name, _)| *name == self.whisper_model) {
+            self.whisper_model = "base".into();
+        }
+        self.whisper_language = self.whisper_language.trim().chars().filter(|c| c.is_ascii_alphabetic()).collect::<String>().to_lowercase();
         self.ui_scale = self.ui_scale.clamp(75, 200);
         if !super::themes::is_color(self.accent.trim()) {
             self.accent = String::new();
@@ -343,6 +357,8 @@ pub struct SettingsRust {
     upscaler: i32,
     opensubtitles_api_key: QString,
     iptv_list: QString,
+    whisper_model: QString,
+    whisper_language: QString,
     theme: QString,
     accent: QString,
     ui_scale: i32,
@@ -392,6 +408,8 @@ impl From<SettingsFile> for SettingsRust {
             upscaler: f.upscaler,
             opensubtitles_api_key: QString::from(&f.opensubtitles_api_key),
             iptv_list: QString::from(&f.iptv_list),
+            whisper_model: QString::from(&f.whisper_model),
+            whisper_language: QString::from(&f.whisper_language),
             theme: QString::from(&f.theme),
             accent: QString::from(&f.accent),
             ui_scale: f.ui_scale,
@@ -443,6 +461,8 @@ impl From<&SettingsRust> for SettingsFile {
             upscaler: s.upscaler,
             opensubtitles_api_key: s.opensubtitles_api_key.to_string(),
             iptv_list: s.iptv_list.to_string(),
+            whisper_model: s.whisper_model.to_string(),
+            whisper_language: s.whisper_language.to_string(),
             theme: s.theme.to_string(),
             accent: s.accent.to_string(),
             ui_scale: s.ui_scale,
@@ -601,6 +621,8 @@ mod tests {
             upscaler: 2,
             opensubtitles_api_key: "abc123".into(),
             iptv_list: "http://exemple.tv/liste.m3u".into(),
+            whisper_model: "base".into(),
+            whisper_language: "fr".into(),
             theme: "light".into(),
             accent: "#2D7FF9".into(),
             ui_scale: 115,
