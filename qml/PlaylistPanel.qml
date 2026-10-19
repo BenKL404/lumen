@@ -254,6 +254,9 @@ Rectangle {
 
         // Recherche ouverte : le champ remplace les boutons
         property bool searching: false
+        // Playlist étroite : icônes à la place des libellés, puis sans « tout en haut / en bas »
+        readonly property bool compact: width < 360
+        readonly property bool narrow: width < 262
 
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: 44
@@ -311,14 +314,14 @@ Rectangle {
 
             readonly property bool hasSelection: panel.selected >= 0 && panel.selected < panel.count
 
-            ToolButton { theme: panel.theme; icon: "arrow-up-to-line"; enabled: tools.hasSelection; onClicked: panel.moveSelected(0) }
+            ToolButton { theme: panel.theme; icon: "arrow-up-to-line"; visible: !toolbar.narrow; enabled: tools.hasSelection; onClicked: panel.moveSelected(0) }
             ToolButton { theme: panel.theme; icon: "chevron-up"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected - 1) }
             ToolButton { theme: panel.theme; icon: "chevron-down"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.selected + 1) }
-            ToolButton { theme: panel.theme; icon: "arrow-down-to-line"; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.count - 1) }
+            ToolButton { theme: panel.theme; icon: "arrow-down-to-line"; visible: !toolbar.narrow; enabled: tools.hasSelection; onClicked: panel.moveSelected(panel.count - 1) }
             Item { width: 5; height: 1 }
-            ToolButton { id: addButton; theme: panel.theme; label: "AJOUTER"; onClicked: panel.addRequested(addButton) }
-            ToolButton { theme: panel.theme; label: "RETIRER"; enabled: tools.hasSelection; onClicked: panel.removeSelected() }
-            ToolButton { theme: panel.theme; label: "TRIER"; enabled: panel.count > 1; onClicked: panel.playlist.sort() }
+            ToolButton { id: addButton; theme: panel.theme; label: "AJOUTER"; icon: toolbar.compact ? "plus" : ""; onClicked: panel.addRequested(addButton) }
+            ToolButton { theme: panel.theme; label: "RETIRER"; icon: toolbar.compact ? "trash" : ""; enabled: tools.hasSelection; onClicked: panel.removeSelected() }
+            ToolButton { theme: panel.theme; label: "TRIER"; icon: toolbar.compact ? "list-ordered" : ""; enabled: panel.count > 1; onClicked: panel.playlist.sort() }
         }
 
         // Champ de recherche, ouvert par la loupe
