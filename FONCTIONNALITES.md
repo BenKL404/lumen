@@ -38,8 +38,8 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 
 ### Barre de contrôle
 - Sous la vidéo en mode fenêtré ; en plein écran et en mode mini, panneau flottant en verre fumé qui apparaît au mouvement de la souris.
-- **Gauche** : lecture/pause (bouton ambre mis en avant), précédent, suivant, ±10 s, temps écoulé / durée totale.
-- **Droite** : vitesse, pistes audio, sous-titres, volume, capture, playlist, réglages d'image, plein écran.
+- **Gauche** : lecture/pause, arrêt, précédent, suivant, ouvrir, aléatoire, répétition, temps écoulé / durée totale.
+- **Droite** : piste audio, sous-titres, réglages d'image, playlist, plein écran (vitesse et capture : clic droit et clavier).
 - Clic sur la durée totale pour afficher le **temps restant** à la place (comme PotPlayer).
 - Barre de progression qui s'épaissit au survol, avec **miniature** et heure au-dessus du curseur.
 - **Repères de chapitres** visibles directement sur la barre de progression.

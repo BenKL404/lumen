@@ -22,11 +22,11 @@ Rectangle {
 
     // Fenêtre étroite : les boutons secondaires se masquent par paliers (toujours accessibles
     // par le clic droit). Seuils calculés sur la largeur des boutons (36 px + 2 d'espacement).
-    // 0 : tout ; 1 : sans capture ni vitesse ; 2 : sans aléatoire ni répétition ;
-    // 3 : sans audio, sous-titres ni réglages d'image ; 4 : sans stop ni ouvrir ; 5 : sans durée totale
+    // 0 : tout ; 1 : sans aléatoire ni répétition ; 2 : sans audio, sous-titres ni réglages d'image ;
+    // 3 : sans stop ni ouvrir ; 4 : sans durée totale
     readonly property int compact: {
         const w = width - 24
-        return w >= 760 ? 0 : w >= 684 ? 1 : w >= 608 ? 2 : w >= 494 ? 3 : w >= 418 ? 4 : 5
+        return w >= 684 ? 0 : w >= 608 ? 1 : w >= 494 ? 2 : w >= 418 ? 3 : 4
     }
 
     // Infos techniques ; une pochette d'album n'est pas une vraie piste vidéo
@@ -152,10 +152,19 @@ Rectangle {
                     iconSize: 20
                     onClicked: bar.video.hasMedia ? bar.video.togglePause() : bar.openRequested()
                 }
-                IconButton { theme: bar.theme; icon: "stop"; filled: true; iconSize: 16; visible: bar.compact < 4; enabled: bar.video.hasMedia; onClicked: bar.stopRequested() }
+                IconButton { theme: bar.theme; icon: "stop"; filled: true; iconSize: 16; visible: bar.compact < 3; enabled: bar.video.hasMedia; onClicked: bar.stopRequested() }
                 IconButton { theme: bar.theme; icon: "skip-back"; filled: true; enabled: bar.hasPrevious; onClicked: bar.previousRequested() }
                 IconButton { theme: bar.theme; icon: "skip-forward"; filled: true; enabled: bar.hasNext; onClicked: bar.nextRequested() }
-                IconButton { theme: bar.theme; icon: "folder-open"; visible: bar.compact < 4; onClicked: bar.openRequested() }
+                IconButton { theme: bar.theme; icon: "folder-open"; visible: bar.compact < 3; onClicked: bar.openRequested() }
+                // Ordre de lecture, à côté des boutons de lecture
+                IconButton { theme: bar.theme; icon: "shuffle"; visible: bar.compact < 1; active: bar.shuffle; onClicked: bar.shuffleRequested() }
+                IconButton {
+                    theme: bar.theme
+                    visible: bar.compact < 1
+                    icon: bar.repeatMode === 1 ? "repeat-1" : "repeat"
+                    active: bar.repeatMode !== 0
+                    onClicked: bar.repeatRequested()
+                }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
@@ -168,14 +177,14 @@ Rectangle {
                         font.family: "monospace"
                     }
                     Text {
-                        visible: bar.compact < 5
+                        visible: bar.compact < 4
                         text: "  /  "
                         color: bar.theme.muted
                         font.pixelSize: 14
                         font.family: "monospace"
                     }
                     Text {
-                        visible: bar.compact < 5
+                        visible: bar.compact < 4
                         text: bar.showRemaining
                               ? "-" + bar.utils.formatClock(bar.video.duration - bar.video.position)
                               : bar.utils.formatClock(bar.video.duration)
@@ -237,24 +246,10 @@ Rectangle {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 spacing: 2
 
-                IconButton { theme: bar.theme; icon: "audio-lines"; visible: bar.compact < 3; onClicked: bar.audioMenuRequested() }
-                IconButton { theme: bar.theme; icon: "captions"; visible: bar.compact < 3; onClicked: bar.subtitleMenuRequested() }
-                IconButton {
-                    theme: bar.theme
-                    visible: bar.compact < 1
-                    glyph: "×" + bar.video.speed.toFixed(bar.video.speed % 1 === 0 ? 0 : 2)
-                    onClicked: bar.video.speed = bar.video.speed >= 2 ? 1.0 : bar.video.speed + 0.25
-                }
-                IconButton { theme: bar.theme; icon: "camera"; visible: bar.compact < 1; enabled: bar.video.hasMedia; onClicked: bar.video.screenshot() }
-                IconButton { theme: bar.theme; icon: "sun"; visible: bar.compact < 3; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
-                IconButton { theme: bar.theme; icon: "shuffle"; visible: bar.compact < 2; active: bar.shuffle; onClicked: bar.shuffleRequested() }
-                IconButton {
-                    theme: bar.theme
-                    visible: bar.compact < 2
-                    icon: bar.repeatMode === 1 ? "repeat-1" : "repeat"
-                    active: bar.repeatMode !== 0
-                    onClicked: bar.repeatRequested()
-                }
+                // L'essentiel ; vitesse et capture restent au clic droit et au clavier
+                IconButton { theme: bar.theme; icon: "audio-lines"; visible: bar.compact < 2; onClicked: bar.audioMenuRequested() }
+                IconButton { theme: bar.theme; icon: "captions"; visible: bar.compact < 2; onClicked: bar.subtitleMenuRequested() }
+                IconButton { theme: bar.theme; icon: "sun"; visible: bar.compact < 2; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
                 IconButton { theme: bar.theme; icon: "list"; onClicked: bar.playlistRequested() }
                 IconButton { theme: bar.theme; icon: bar.fullscreen ? "minimize" : "maximize"; onClicked: bar.fullscreenRequested() }
             }
