@@ -137,6 +137,11 @@ YouTube demande aussi un moteur JavaScript : Lumen trouve `deno` ou `node` (y co
 Liens directs vers un flux (`.mp4`, `.ts`, `.m3u8` HLS, `rtmp://`, `rtsp://`) acceptés aussi.
 Si une vidéo refuse de démarrer, mettre d'abord yt-dlp à jour (`yt-dlp -U`).
 
+**Sous-titres de YouTube** : ceux écrits par l'auteur et ceux **générés automatiquement** par
+YouTube (traductions automatiques comprises, par exemple « French from English ») apparaissent dans
+le menu des sous-titres, pour les langues choisies dans Préférences › Sous-titres (`fr,en` par
+défaut) et la langue d'origine de la vidéo.
+
 ---
 
 ## Interface

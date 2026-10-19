@@ -185,6 +185,7 @@ Toutes ces touches se changent dans **Préférences › Raccourcis** (Échap res
 - Filtres pour améliorer l'image (netteté, agrandissement haute qualité).
 - Égaliseur audio.
 - Lecture de vidéos en ligne et YouTube, y compris les **directs** (lien de la vidéo ou `youtube.com/@chaine/live`).
+- Sous-titres de YouTube, y compris ceux **générés automatiquement** et leurs traductions, dans les langues préférées.
 - Chaînes IPTV : listes M3U (lien ou fichier) et comptes Xtream Codes, chaînes nommées dans la playlist.
 - Recherche automatique de sous-titres sur Internet.
 - Système d'extensions pour ajouter des fonctions.

@@ -130,9 +130,6 @@ Window {
         const ytdl = utils.ytdlPath()
         if (ytdl !== "")
             video.command(["set", "script-opts", "ytdl_hook-ytdl_path=" + ytdl])
-        const js = utils.jsRuntime()
-        if (js !== "")
-            video.command(["set", "ytdl-raw-options", "js-runtimes=" + js])
         video.command(["set", "ytdl-format", "bestvideo[height<=?1080]+bestaudio/best"])
         playlist.setRepeat(settings.repeatMode)
         playlist.setShuffleEnabled(settings.shuffle)
@@ -1680,11 +1677,16 @@ Window {
         preferencesPanel.visible = show
     }
 
+    // Moteur JavaScript de yt-dlp (cherché une fois)
+    readonly property string jsRuntime: utils.jsRuntime()
+
     // Préférences appliquées à mpv : au démarrage, puis à chaque changement
     function applyPlaybackSettings() {
         video.command(["set", "hwdec", settings.hardwareDecoding ? "auto-safe" : "no"])
         video.command(["set", "alang", settings.audioLanguages])
         video.command(["set", "slang", settings.subtitleLanguages])
+        // yt-dlp : moteur JavaScript, et sous-titres de YouTube (automatiques compris) dans ces langues
+        video.command(["set", "ytdl-raw-options", utils.ytdlRawOptions(root.jsRuntime, settings.subtitleLanguages)])
         video.command(["set", "sub-scale", String(settings.subtitleScale / 100)])
         applyShaders()
     }

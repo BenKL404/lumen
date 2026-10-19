@@ -143,6 +143,12 @@ pub mod qobject {
         #[cxx_name = "jsRuntime"]
         fn js_runtime(self: &Utils) -> QString;
 
+        /// Valeur de `ytdl-raw-options` : moteur JavaScript et sous-titres automatiques
+        /// (générés par YouTube) dans les langues préférées et la langue d'origine.
+        #[qinvokable]
+        #[cxx_name = "ytdlRawOptions"]
+        fn ytdl_raw_options(self: &Utils, js_runtime: &QString, languages: &QString) -> QString;
+
         /// Vrai pour une adresse en ligne (http, https…) plutôt qu'un fichier local
         #[qinvokable]
         #[cxx_name = "isOnline"]
@@ -324,6 +330,10 @@ impl qobject::Utils {
     pub fn ytdl_path(&self) -> QString {
         let found = find_ytdl(&home(), &std::env::var("PATH").unwrap_or_default());
         QString::from(&found.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default())
+    }
+
+    pub fn ytdl_raw_options(&self, js_runtime: &QString, languages: &QString) -> QString {
+        QString::from(&ytdl_raw_options(&js_runtime.to_string(), &languages.to_string()))
     }
 
     pub fn js_runtime(&self) -> QString {
@@ -533,6 +543,27 @@ pub fn find_ytdl(home: &Path, path_env: &str) -> Option<PathBuf> {
 
 /// Moteur JavaScript dont yt-dlp a besoin pour YouTube : deno ou node dans le PATH, sinon
 /// le node le plus récent de nvm (absent du PATH des applications lancées depuis le bureau).
+/// Options passées à yt-dlp par mpv (liste « clé=valeur » séparée par des virgules : aucune
+/// valeur ne doit en contenir). Sous-titres : ceux écrits à la main et ceux générés par
+/// YouTube (`write-auto-subs`), limités aux langues préférées (« fr,en » -> « (fr|en).* »,
+/// traductions automatiques comprises) et à la langue d'origine (`*-orig`), sans quoi YouTube
+/// en propose plusieurs centaines.
+pub fn ytdl_raw_options(js_runtime: &str, languages: &str) -> String {
+    let codes: Vec<&str> = languages
+        .split([',', ';', ' '])
+        .map(str::trim)
+        .filter(|c| !c.is_empty() && c.chars().all(|ch| ch.is_ascii_alphabetic() || ch == '-'))
+        .collect();
+    let codes = if codes.is_empty() { vec!["fr", "en"] } else { codes };
+    let mut options = Vec::new();
+    if !js_runtime.is_empty() && !js_runtime.contains(',') {
+        options.push(format!("js-runtimes={js_runtime}"));
+    }
+    options.push("write-auto-subs=".to_string());
+    options.push(format!("sub-langs=({}).*|.*-orig", codes.join("|")));
+    options.join(",")
+}
+
 pub fn find_js_runtime(home: &Path, path_env: &str) -> Option<String> {
     for name in ["deno", "node"] {
         if let Some(path) = in_path(name, path_env) {
@@ -777,5 +808,16 @@ mod tests {
         assert_eq!(track_label(3, "Français", "fr", "subrip", 0), "Français · SUBRIP");
         assert_eq!(track_label(4, "", "und", "", 0), "Piste 4");
         assert_eq!(track_label(5, "", "xyz", "", 0), "XYZ");
+    }
+
+    #[test]
+    fn builds_ytdl_raw_options() {
+        assert_eq!(
+            ytdl_raw_options("node:/usr/bin/node", "fr, en"),
+            "js-runtimes=node:/usr/bin/node,write-auto-subs=,sub-langs=(fr|en).*|.*-orig"
+        );
+        assert_eq!(ytdl_raw_options("", ""), "write-auto-subs=,sub-langs=(fr|en).*|.*-orig");
+        assert!(!ytdl_raw_options("", "fr;de").contains(','.to_string().repeat(2).as_str()));
+        assert_eq!(ytdl_raw_options("", "pt-BR"), "write-auto-subs=,sub-langs=(pt-BR).*|.*-orig");
     }
 }
