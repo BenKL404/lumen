@@ -8,7 +8,6 @@ Rectangle {
     property var utils
     property var theme
     property bool floating: false
-    property bool fullscreen: false
     property bool hasPrevious: false
     property bool hasNext: false
     property int repeatMode: 0 // 0 désactivé, 1 le fichier, 2 la playlist
@@ -23,10 +22,11 @@ Rectangle {
     // Fenêtre étroite : les boutons secondaires se masquent par paliers (toujours accessibles
     // par le clic droit). Seuils calculés sur la largeur des boutons (36 px + 2 d'espacement).
     // 0 : tout ; 1 : sans aléatoire ni répétition ; 2 : sans audio, sous-titres ni réglages d'image ;
-    // 3 : sans stop ; 4 : sans durée totale. Ouvrir : lecture sans vidéo, touche O, clic droit
+    // 3 : sans stop ; 4 : sans durée totale. Ouvrir : lecture sans vidéo, touche O, clic droit ;
+    // plein écran : triple-clic, F ou Entrée
     readonly property int compact: {
         const w = width - 24
-        return w >= 646 ? 0 : w >= 570 ? 1 : w >= 456 ? 2 : w >= 418 ? 3 : 4
+        return w >= 608 ? 0 : w >= 532 ? 1 : w >= 418 ? 2 : w >= 380 ? 3 : 4
     }
 
     // Infos techniques ; une pochette d'album n'est pas une vraie piste vidéo
@@ -44,7 +44,6 @@ Rectangle {
 
     signal openRequested()
     signal stopRequested()
-    signal fullscreenRequested()
     signal audioMenuRequested()
     signal subtitleMenuRequested()
     signal previousRequested()
@@ -250,7 +249,6 @@ Rectangle {
                 IconButton { theme: bar.theme; icon: "captions"; visible: bar.compact < 2; onClicked: bar.subtitleMenuRequested() }
                 IconButton { theme: bar.theme; icon: "sun"; visible: bar.compact < 2; active: bar.imagePanelOpen; onClicked: bar.imageSettingsRequested() }
                 IconButton { theme: bar.theme; icon: "list"; onClicked: bar.playlistRequested() }
-                IconButton { theme: bar.theme; icon: bar.fullscreen ? "minimize" : "maximize"; onClicked: bar.fullscreenRequested() }
             }
         }
     }

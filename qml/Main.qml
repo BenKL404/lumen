@@ -1226,7 +1226,6 @@ Window {
     ControlBar {
         id: controls
         floating: root.immersive
-        fullscreen: root.fullscreen
         anchors { left: parent.left; right: stage.right; bottom: parent.bottom; margins: floating ? (root.mini ? 8 : 20) : 0 }
         video: video
         utils: utils
@@ -1239,7 +1238,6 @@ Window {
 
         onOpenRequested: fileDialog.open()
         onStopRequested: root.stop()
-        onFullscreenRequested: root.toggleFullScreen()
         onAudioMenuRequested: root.toggleTrackMenu("audio")
         onSubtitleMenuRequested: root.toggleTrackMenu("sub")
         onPreviousRequested: root.playAt(playlist.previousIndex)
