@@ -77,7 +77,17 @@ Window {
     // En fenêtré, la playlist est accolée au bord droit : la fenêtre s'élargit d'autant
     // et la vidéo garde sa taille. Fenêtre agrandie, elle prend place dans la fenêtre.
     property int attachedWidth: 0
-    readonly property int playlistWidth: 360
+    // Largeur de la playlist (accolée ou flottante), réglée en glissant son bord gauche
+    property int playlistWidth: settings.playlistWidth
+
+    function resizePlaylist(w) {
+        const maxWidth = Math.min(900, width - (immersive ? 200 : 320))
+        w = Math.round(Math.max(240, Math.min(w, maxWidth)))
+        playlistWidth = w
+        // Accolée : la fenêtre garde sa taille, la vidéo cède la place
+        if (playlistAttached)
+            attachedWidth = w
+    }
     readonly property bool playlistAttached: playlistPanel.open && attachedWidth > 0 && visibility === Window.Windowed
 
     // Média en cours (clé de l'historique) ; vide tant que le fichier n'est pas chargé,
@@ -145,6 +155,7 @@ Window {
         settings.repeatMode = playlist.repeatMode
         settings.shuffle = playlist.shuffle
         settings.playlistOpen = playlistPanel.open
+        settings.playlistWidth = playlistWidth
         imageKeys.forEach(k => settings[k] = image[k])
         settings.equalizer = sound.equalizer
         settings.normalizeVolume = sound.normalize
@@ -1299,7 +1310,7 @@ Window {
     PlaylistPanel {
         id: playlistPanel
         anchors { top: root.immersive || root.playlistAttached ? parent.top : titleBar.bottom; bottom: parent.bottom }
-        width: root.immersive ? Math.min(400, root.width * 0.4) : root.playlistWidth
+        width: root.immersive ? Math.min(root.playlistWidth, root.width * 0.6) : root.playlistWidth
         x: open ? root.width - width : root.width
         visible: open || x < root.width
         Behavior on x {
@@ -1323,6 +1334,31 @@ Window {
             contextMenu.popup(anchor, true)
         }
         onCloseRequested: root.setPlaylistOpen(false)
+
+        // Bord gauche : glisser pour élargir ou rétrécir la playlist
+        MouseArea {
+            id: playlistResizer
+            anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+            width: 6
+            hoverEnabled: true
+            cursorShape: Qt.SizeHorCursor
+            property real startX: 0
+            property int startWidth: 0
+            onPressed: (mouse) => {
+                startX = mapToItem(null, mouse.x, 0).x
+                startWidth = root.playlistWidth
+            }
+            onPositionChanged: (mouse) => {
+                if (pressed)
+                    root.resizePlaylist(startWidth + startX - mapToItem(null, mouse.x, 0).x)
+            }
+            Rectangle {
+                anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                width: 2
+                color: root.theme.accent
+                visible: playlistResizer.containsMouse || playlistResizer.pressed
+            }
+        }
     }
 
     // ------------------------------------------------------------ Menus

@@ -160,7 +160,7 @@ défaut) et la langue d'origine de la vidéo.
   d'image, liste IPTV. Les décalages audio et sous-titres restent au clavier (Maj+Z / Maj+X, Z / X).
 - **Fenêtres modales** (préférences, raccourcis, vidéo en ligne, sous-titres en ligne) : tant
   qu'elles sont ouvertes, la vidéo ne réagit ni à la souris ni aux raccourcis ; Échap les ferme.
-- **Playlist** (F6) : accolée à droite ; ligne en cours en orange, ligne choisie en gras,
+- **Playlist** (F6) : accolée à droite, largeur réglable en glissant son bord gauche ; ligne en cours en orange, ligne choisie en gras,
   glisser-déposer, recherche, Suppr pour retirer.
 
 ---

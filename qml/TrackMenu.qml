@@ -28,7 +28,8 @@ Rectangle {
     property real maxHeight: Number.POSITIVE_INFINITY
     height: Math.min(content.implicitHeight + 20, maxHeight)
     radius: theme.radius
-    color: theme.surface
+    // Opaque, même couleur que la playlist
+    color: theme.chrome
     border.color: menu.theme.subtle
 
     // Absorbe les clics : ne pas mettre en pause en cliquant dans le menu

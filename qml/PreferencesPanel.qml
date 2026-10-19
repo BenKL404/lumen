@@ -279,7 +279,8 @@ Rectangle {
     width: 820
     height: 560
     radius: theme.radius
-    color: theme.menu
+    // Opaque, même couleur que la playlist
+    color: theme.chrome
     border.color: theme.border
     clip: true
 

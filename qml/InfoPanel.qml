@@ -60,8 +60,9 @@ Rectangle {
     width: 340
     height: content.implicitHeight + 24
     radius: 10
-    color: Qt.rgba(0, 0, 0, 0.72)
-    border.color: Qt.rgba(1, 1, 1, 0.12)
+    // Opaque, même couleur que la playlist
+    color: theme.chrome
+    border.color: theme.border
 
     onVisibleChanged: if (visible) refresh()
 
@@ -98,13 +99,13 @@ Rectangle {
                         Text {
                             width: 110
                             text: modelData[0]
-                            color: Qt.rgba(1, 1, 1, 0.6)
+                            color: panel.theme.muted
                             font.pixelSize: 12
                         }
                         Text {
                             width: content.width - 120
                             text: modelData[1]
-                            color: panel.theme.onVideo
+                            color: panel.theme.text
                             font.pixelSize: 12
                             font.family: "monospace"
                             elide: Text.ElideMiddle

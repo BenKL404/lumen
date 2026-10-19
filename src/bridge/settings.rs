@@ -22,6 +22,8 @@ pub mod qobject {
         #[qproperty(bool, shuffle)]
         #[qproperty(i32, window_width)]
         #[qproperty(i32, window_height)]
+        // Largeur de la playlist (bord gauche glissé à la souris)
+        #[qproperty(i32, playlist_width)]
         #[qproperty(bool, maximized)]
         #[qproperty(bool, playlist_open)]
         #[qproperty(bool, resume_playback)]
@@ -137,6 +139,8 @@ pub struct SettingsFile {
     pub shuffle: bool,
     pub window_width: i32,
     pub window_height: i32,
+    /// Largeur de la playlist, en pixels
+    pub playlist_width: i32,
     pub maximized: bool,
     pub playlist_open: bool,
     /// Reprendre chaque vidéo là où on s'est arrêté
@@ -205,6 +209,7 @@ impl Default for SettingsFile {
             shuffle: false,
             window_width: 1280,
             window_height: 760,
+            playlist_width: 360,
             maximized: false,
             playlist_open: false,
             resume_playback: true,
@@ -252,6 +257,7 @@ impl SettingsFile {
         // Mêmes minimums que la fenêtre (Main.qml), et pas de taille absurde
         self.window_width = self.window_width.clamp(640, 16384);
         self.window_height = self.window_height.clamp(400, 16384);
+        self.playlist_width = self.playlist_width.clamp(240, 900);
         for value in [&mut self.brightness, &mut self.contrast, &mut self.saturation, &mut self.gamma, &mut self.hue] {
             *value = (*value).clamp(-100, 100);
         }
@@ -332,6 +338,7 @@ pub struct SettingsRust {
     shuffle: bool,
     window_width: i32,
     window_height: i32,
+    playlist_width: i32,
     maximized: bool,
     playlist_open: bool,
     resume_playback: bool,
@@ -377,6 +384,7 @@ impl From<SettingsFile> for SettingsRust {
             shuffle: f.shuffle,
             window_width: f.window_width,
             window_height: f.window_height,
+            playlist_width: f.playlist_width,
             maximized: f.maximized,
             playlist_open: f.playlist_open,
             resume_playback: f.resume_playback,
@@ -436,6 +444,7 @@ impl From<&SettingsRust> for SettingsFile {
             shuffle: s.shuffle,
             window_width: s.window_width,
             window_height: s.window_height,
+            playlist_width: s.playlist_width,
             maximized: s.maximized,
             playlist_open: s.playlist_open,
             resume_playback: s.resume_playback,
@@ -596,6 +605,7 @@ mod tests {
             shuffle: true,
             window_width: 1600,
             window_height: 900,
+            playlist_width: 420,
             maximized: true,
             playlist_open: true,
             resume_playback: false,
