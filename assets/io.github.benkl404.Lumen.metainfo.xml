@@ -42,15 +42,15 @@
   <screenshots>
     <screenshot type="default">
       <caption>Watching a video</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/lecture.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.1.0/assets/screenshots/lecture.png</image>
     </screenshot>
     <screenshot>
       <caption>Playlist docked next to the video</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/playlist.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.1.0/assets/screenshots/playlist.png</image>
     </screenshot>
     <screenshot>
       <caption>Preferences</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/preferences.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.1.0/assets/screenshots/preferences.png</image>
     </screenshot>
   </screenshots>
 
@@ -70,6 +70,12 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.0" date="2026-10-19">
+      <description>
+        <p>IPTV channels (M3U lists, Xtream Codes accounts) and YouTube live streams. Shortcuts editable in the preferences, which now hold every setting. Leaner control bar, submenus in the Lumen menu, modal dialogs that block the video, menus that fit small windows.</p>
+        <p xml:lang="fr">Chaînes IPTV (listes M3U, comptes Xtream Codes) et directs YouTube. Raccourcis modifiables dans les préférences, qui regroupent désormais tous les réglages. Barre de contrôle allégée, sous-menus dans le menu Lumen, fenêtres modales qui bloquent la vidéo, menus adaptés aux petites fenêtres.</p>
+      </description>
+    </release>
     <release version="1.0.2" date="2026-10-19">
       <description>
         <p>Flatpak: the automatic playlist of neighbouring files works wherever the video is (read-only access to files).</p>

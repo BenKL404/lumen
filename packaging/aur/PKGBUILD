@@ -3,7 +3,7 @@
 # Maintainer: Kokou Bernard KPEDZI <167539412+BenKL404@users.noreply.github.com>
 pkgname=lumen-player-git
 _pkgname=lumen
-pkgver=1.0.2
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Lecteur vidéo moderne pour Linux, à l’interface épurée (Qt 6, libmpv)"
 arch=('x86_64' 'aarch64')
