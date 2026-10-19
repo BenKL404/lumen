@@ -15,7 +15,7 @@ Window {
     minimumHeight: mini ? 135 : 400
     visible: true
     color: theme.background
-    title: video.hasMedia ? video.mediaTitle + " — Lumen" : "Lumen"
+    title: video.hasMedia ? root.mediaName + " — Lumen" : "Lumen"
     // Fenêtre sans bordure : la barre de titre est dessinée par Lumen
     flags: Qt.Window | Qt.FramelessWindowHint | (pinned ? Qt.WindowStaysOnTopHint : 0)
 
@@ -54,6 +54,9 @@ Window {
         || appMenu.visible || contextMenu.visible
     // Fenêtre modale au centre : la vidéo ne réagit plus (souris, molette, raccourcis)
     // jusqu'à sa fermeture, sauf Échap et la touche qui l'a ouverte
+    // Nom du média en cours : nom de la chaîne pour une liste IPTV, sinon titre donné par mpv
+    readonly property string mediaName: playlist.current >= 0 && (playlist.titles[playlist.current] || "") !== ""
+                                        ? playlist.titles[playlist.current] : video.mediaTitle
     readonly property bool modalOpen: urlPanel.visible || subtitleSearchPanel.visible
         || preferencesPanel.visible || shortcutsPanel.visible
     readonly property var modalKeys: ["preferences", "raccourcis", "ouvrir_url", "chercher_sous_titres"]
@@ -87,6 +90,7 @@ Window {
         { label: "Ouvrir un fichier…", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
         { label: "Ouvrir un dossier…", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
         { label: "Ouvrir une vidéo en ligne…", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
+        { label: "Chaînes IPTV", enabled: settings.iptvList !== "", action: () => root.openList(settings.iptvList) },
         { label: "Ajouter des sous-titres…", action: () => subtitleDialog.open() },
         { separator: true },
         { label: "Lecture / pause", shortcut: root.keyLabel("lecture_pause"), action: () => video.togglePause() },
@@ -178,6 +182,7 @@ Window {
             { label: "Ouvrir un fichier…", icon: "folder-open", shortcut: root.keyLabel("ouvrir"), action: () => fileDialog.open() },
             { label: "Ouvrir un dossier…", icon: "folder", shortcut: root.keyLabel("ouvrir_dossier"), action: () => folderDialog.open() },
             { label: "Ouvrir une vidéo en ligne…", icon: "globe", shortcut: root.keyLabel("ouvrir_url"), action: () => root.openUrlPanel() },
+            { label: "Chaînes IPTV", icon: "tv", enabled: settings.iptvList !== "", action: () => root.openList(settings.iptvList) },
             { label: "Ajouter à la playlist…", action: () => addDialog.open() },
             { separator: true },
             { label: "Lecture", icon: "play", enabled: has, submenu: [
@@ -619,9 +624,13 @@ Window {
         osd("Capture enregistrée")
     }
 
-    function openUrl(url) {
+    function openUrl(url, direct) {
         if (utils.isFolder(url.toString())) {
             openFolder(url)
+            return
+        }
+        if (!direct && playlist.items.indexOf(url.toString()) < 0 && playlist.isList(url.toString())) {
+            openList(url.toString())
             return
         }
         saveProgress()
@@ -637,6 +646,27 @@ Window {
             osd(utils.fileName(pendingUrl))
     }
 
+    // Liste de chaînes IPTV (lien ou fichier M3U, compte Xtream Codes) : lue en arrière-plan,
+    // elle remplace la playlist ; un flux HLS (.m3u8 d'une seule vidéo) se lit directement
+    property string pendingList: ""
+    function openList(url) {
+        pendingList = url
+        osd("Chargement de la liste de chaînes…", 30000)
+        playlist.openList(url)
+    }
+
+    Connections {
+        target: playlist
+        function onListLoaded(first, count) {
+            settings.iptvList = root.pendingList
+            root.osd(count + (count > 1 ? " chaînes" : " chaîne"))
+            root.setPlaylistOpen(true)
+            root.openUrl(first, true)
+        }
+        function onListIsStream(url) { root.openUrl(url, true) }
+        function onListFailed(message) { root.osd(message, 6000) }
+    }
+
     // Arrêt : ferme le fichier et revient à l'écran d'accueil (la playlist est conservée)
     function stop() {
         saveProgress()
@@ -649,7 +679,7 @@ Window {
 
     function playAt(index) {
         if (index >= 0 && index < playlist.items.length && index !== playlist.current)
-            openUrl(playlist.items[index])
+            openUrl(playlist.items[index], true)
     }
 
     function selectedTrack(type) {
@@ -739,7 +769,7 @@ Window {
 
     function publishState() {
         const status = !video.hasMedia ? 0 : video.paused ? 2 : 1
-        mpris.update(status, video.mediaTitle || utils.fileName(currentUrl), currentUrl,
+        mpris.update(status, root.mediaName || utils.fileName(currentUrl), currentUrl,
                      video.duration, video.position, video.volume, video.speed,
                      playlist.repeatMode, playlist.shuffle, hasNext, hasPrevious)
     }
@@ -828,7 +858,7 @@ Window {
         window: root
         theme: root.theme
         format: !video.hasMedia ? "" : utils.isOnline(root.currentUrl) ? "WEB" : utils.fileExtension(root.currentUrl)
-        title: video.hasMedia ? video.mediaTitle : "Lumen"
+        title: video.hasMedia ? root.mediaName : "Lumen"
         pinned: root.pinned
         onMenuRequested: (anchor) => appMenu.popup(anchor, false)
         onPinToggled: root.pinned = !root.pinned
@@ -964,7 +994,7 @@ Window {
 
             Text {
                 anchors { left: parent.left; top: parent.top; margins: 22; right: parent.right }
-                text: video.mediaTitle
+                text: root.mediaName
                 color: theme.onVideo
                 font.pixelSize: 17
                 font.weight: Font.Medium
@@ -1366,6 +1396,10 @@ Window {
             visible = false
             root.openUrl(url)
         }
+        onXtreamRequested: (server, user, password) => {
+            visible = false
+            root.openList(playlist.xtreamUrl(server, user, password))
+        }
         onCloseRequested: visible = false
     }
 
@@ -1483,6 +1517,7 @@ Window {
         nameFilters: [
             "Vidéos (*.mkv *.mp4 *.avi *.webm *.mov *.wmv *.flv *.ts *.m2ts *.mpg *.ogv)",
             "Audio (*.mp3 *.flac *.ogg *.opus *.wav *.m4a *.aac)",
+            "Listes de chaînes IPTV (*.m3u *.m3u8)",
             "Tous les fichiers (*)"
         ]
         onAccepted: root.openUrl(selectedFile)

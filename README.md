@@ -126,6 +126,22 @@ YouTube demande aussi un moteur JavaScript : Lumen trouve `deno` ou `node` (y co
 
 ---
 
+## IPTV (chaînes en direct)
+
+Lumen ouvre les listes de chaînes **M3U** et les comptes **Xtream Codes** :
+
+- **Lien M3U** : Ctrl+U, coller le lien de la liste (`…/liste.m3u`, `…/get.php?…&type=m3u_plus`).
+- **Fichier M3U** : l'ouvrir comme une vidéo (O, glisser-déposer, « Ouvrir avec »).
+- **Compte Xtream Codes** : Ctrl+U › « Compte IPTV », avec le serveur, l'utilisateur et le
+  mot de passe fournis par l'abonnement.
+
+Les chaînes remplacent la playlist, avec leur nom et leur groupe (« Sport · … ») ; la recherche
+de la playlist filtre sur ces noms. La dernière liste est retenue : menu › **Chaînes IPTV** la
+recharge. Elle est enregistrée dans `settings.toml` (`iptv_list`), identifiants Xtream compris.
+Un lien `.m3u8` qui désigne un seul flux (HLS) se lit directement.
+
+---
+
 ## Raccourcis personnalisables
 
 **F1** (ou menu Lumen › Raccourcis clavier…) affiche toutes les actions et leurs touches.

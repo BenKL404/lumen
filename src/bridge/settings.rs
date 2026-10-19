@@ -51,6 +51,8 @@ pub mod qobject {
         #[qproperty(i32, upscaler)]
         // Clé d'API OpenSubtitles (recherche de sous-titres en ligne)
         #[qproperty(QString, opensubtitles_api_key)]
+        // Dernière liste de chaînes IPTV ouverte (lien M3U, ou adresse Xtream Codes)
+        #[qproperty(QString, iptv_list)]
         // Apparence : thème (« dark », « light », « oled », « skin:<nom> »), accent (#RRGGBB,
         // vide : celui du thème), taille de l'interface en % (au prochain lancement)
         #[qproperty(QString, theme)]
@@ -154,6 +156,8 @@ pub struct SettingsFile {
     pub upscaler: i32,
     /// Clé d'API OpenSubtitles (gratuite, compte opensubtitles.com › API consumers)
     pub opensubtitles_api_key: String,
+    /// Dernière liste IPTV ouverte (lien M3U ou adresse Xtream Codes, identifiants compris)
+    pub iptv_list: String,
     /// Thème : « dark », « light », « oled » ou « skin:<fichier> » (voir themes.rs)
     pub theme: String,
     /// Couleur d'accent « #RRGGBB » ; vide : celle du thème
@@ -200,6 +204,7 @@ impl Default for SettingsFile {
             sharpness: 0,
             upscaler: 0,
             opensubtitles_api_key: String::new(),
+            iptv_list: String::new(),
             theme: "dark".into(),
             accent: String::new(),
             ui_scale: 100,
@@ -230,6 +235,7 @@ impl SettingsFile {
         self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
         self.sharpness = self.sharpness.clamp(0, 100);
         self.opensubtitles_api_key = self.opensubtitles_api_key.trim().to_string();
+        self.iptv_list = self.iptv_list.trim().to_string();
         self.ui_scale = self.ui_scale.clamp(75, 200);
         if !super::themes::is_color(self.accent.trim()) {
             self.accent = String::new();
@@ -319,6 +325,7 @@ pub struct SettingsRust {
     sharpness: i32,
     upscaler: i32,
     opensubtitles_api_key: QString,
+    iptv_list: QString,
     theme: QString,
     accent: QString,
     ui_scale: i32,
@@ -367,6 +374,7 @@ impl From<SettingsFile> for SettingsRust {
             sharpness: f.sharpness,
             upscaler: f.upscaler,
             opensubtitles_api_key: QString::from(&f.opensubtitles_api_key),
+            iptv_list: QString::from(&f.iptv_list),
             theme: QString::from(&f.theme),
             accent: QString::from(&f.accent),
             ui_scale: f.ui_scale,
@@ -417,6 +425,7 @@ impl From<&SettingsRust> for SettingsFile {
             sharpness: s.sharpness,
             upscaler: s.upscaler,
             opensubtitles_api_key: s.opensubtitles_api_key.to_string(),
+            iptv_list: s.iptv_list.to_string(),
             theme: s.theme.to_string(),
             accent: s.accent.to_string(),
             ui_scale: s.ui_scale,
@@ -529,6 +538,7 @@ mod tests {
             sharpness: 40,
             upscaler: 2,
             opensubtitles_api_key: "abc123".into(),
+            iptv_list: "http://exemple.tv/liste.m3u".into(),
             theme: "light".into(),
             accent: "#2D7FF9".into(),
             ui_scale: 115,

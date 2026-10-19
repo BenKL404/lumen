@@ -14,4 +14,4 @@ StartupNotify=true
 StartupWMClass=lumen
 Categories=AudioVideo;Video;Player;
 Keywords=vidéo;film;série;lecteur;video;movie;player;mkv;mp4;
-MimeType=video/x-matroska;video/mp4;video/x-m4v;video/webm;video/x-msvideo;video/avi;video/quicktime;video/x-ms-wmv;video/x-flv;video/mp2t;video/mpeg;video/ogg;video/x-ogm+ogg;video/3gpp;audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/wav;audio/x-wav;audio/mp4;audio/x-m4a;audio/aac;audio/x-matroska;
+MimeType=video/x-matroska;video/mp4;video/x-m4v;video/webm;video/x-msvideo;video/avi;video/quicktime;video/x-ms-wmv;video/x-flv;video/mp2t;video/mpeg;video/ogg;video/x-ogm+ogg;video/3gpp;audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/wav;audio/x-wav;audio/mp4;audio/x-m4a;audio/aac;audio/x-matroska;audio/x-mpegurl;audio/mpegurl;application/vnd.apple.mpegurl;

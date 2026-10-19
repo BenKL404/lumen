@@ -26,6 +26,8 @@ pub mod qobject {
         #[qobject]
         #[qml_element]
         #[qproperty(QStringList, items)]
+        // `titles` : nom de chaque élément venu d'une liste IPTV (vide : nom du fichier)
+        #[qproperty(QStringList, titles)]
         #[qproperty(QList_f64, durations)]
         #[qproperty(i32, current)]
         #[qproperty(i32, next_index)]
@@ -81,6 +83,29 @@ pub mod qobject {
         /// Trie la playlist par nom, dans l'ordre naturel.
         #[qinvokable]
         fn sort(self: Pin<&mut Playlist>);
+
+        /// Vrai si l'adresse ressemble à une liste M3U (chaînes IPTV, ou flux HLS).
+        #[qinvokable]
+        fn is_list(self: &Playlist, url: &QString) -> bool;
+
+        /// Adresse de la liste M3U d'un compte Xtream Codes.
+        #[qinvokable]
+        fn xtream_url(self: &Playlist, server: &QString, user: &QString, password: &QString) -> QString;
+
+        /// Lit une liste M3U (fichier ou lien) en arrière-plan. Résultat : `listLoaded`
+        /// (la playlist est remplacée par les chaînes), `listIsStream` (flux HLS à lire
+        /// directement) ou `listFailed`.
+        #[qinvokable]
+        fn open_list(self: Pin<&mut Playlist>, url: &QString);
+
+        #[qsignal]
+        fn list_loaded(self: Pin<&mut Playlist>, first: QString, count: i32);
+
+        #[qsignal]
+        fn list_is_stream(self: Pin<&mut Playlist>, url: QString);
+
+        #[qsignal]
+        fn list_failed(self: Pin<&mut Playlist>, message: QString);
     }
 
     impl cxx_qt::Threading for Playlist {}
@@ -96,6 +121,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QList, QString, QStringList};
 use regex::Regex;
 
+use super::iptv::{self, List};
 use super::utils::local_path;
 
 #[derive(Default)]
@@ -103,7 +129,10 @@ pub struct PlaylistRust {
     model: Items,
     /// Durées déjà lues, par chemin ; NaN tant que la lecture est en cours
     durations_cache: HashMap<String, f64>,
+    /// Noms des chaînes IPTV, par adresse
+    titles_cache: HashMap<String, String>,
     items: QStringList,
+    titles: QStringList,
     durations: QList<f64>,
     current: i32,
     next_index: i32,
@@ -198,18 +227,52 @@ impl qobject::Playlist {
         self.as_mut().sync();
     }
 
+    pub fn is_list(&self, url: &QString) -> bool {
+        iptv::is_list_url(&url.to_string())
+    }
+
+    pub fn xtream_url(&self, server: &QString, user: &QString, password: &QString) -> QString {
+        QString::from(&iptv::xtream_url(&server.to_string(), &user.to_string(), &password.to_string()))
+    }
+
+    pub fn open_list(self: Pin<&mut Self>, url: &QString) {
+        let url = url.to_string();
+        let thread = self.qt_thread();
+        std::thread::spawn(move || {
+            let result = fetch_list(&url);
+            let _ = thread.queue(move |mut playlist| match result {
+                Ok(List::Channels(channels)) => {
+                    let count = channels.len() as i32;
+                    let keys = channels.iter().map(|c| c.url.clone()).collect();
+                    for channel in channels {
+                        let title = iptv::title(&channel);
+                        playlist.as_mut().rust_mut().titles_cache.insert(channel.url, title);
+                    }
+                    let first = playlist.as_mut().rust_mut().model.replace(keys);
+                    playlist.as_mut().sync();
+                    playlist.as_mut().list_loaded(QString::from(&first.map(|k| item_url(&k)).unwrap_or_default()), count);
+                }
+                Ok(List::Stream) => playlist.as_mut().list_is_stream(QString::from(&url)),
+                Err(message) => playlist.as_mut().list_failed(QString::from(&message)),
+            });
+        });
+    }
+
     /// Recopie le modèle dans les propriétés QML et lance la lecture des durées manquantes.
     fn sync(mut self: Pin<&mut Self>) {
         let model = &self.rust().model;
         let mut items = QList::<QString>::default();
+        let mut titles = QList::<QString>::default();
         for key in &model.keys {
             items.append(QString::from(&item_url(key)));
+            titles.append(QString::from(self.rust().titles_cache.get(key).map_or("", String::as_str)));
         }
         let index = |i: Option<usize>| i.map_or(-1, |i| i as i32);
         let (current, next, previous) =
             (index(model.current_index()), index(model.next_index()), index(model.previous_index()));
         let (repeat, shuffle) = (model.repeat as i32, model.shuffle());
 
+        self.as_mut().set_titles(QStringList::from(&titles));
         self.as_mut().set_items(QStringList::from(&items));
         self.as_mut().set_current(current);
         self.as_mut().set_next_index(next);
@@ -267,6 +330,27 @@ impl qobject::Playlist {
             }
         });
     }
+}
+
+/// Contenu d'une liste M3U locale ou en ligne, analysé
+fn fetch_list(url: &str) -> Result<List, String> {
+    let bytes = if super::utils::is_online(url) {
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
+            .user_agent(concat!("Lumen/", env!("CARGO_PKG_VERSION")))
+            .build()
+            .into();
+        let mut response = agent.get(url).call().map_err(|e| format!("Liste inaccessible ({e})"))?;
+        response
+            .body_mut()
+            .with_config()
+            .limit(64 * 1024 * 1024)
+            .read_to_vec()
+            .map_err(|e| format!("Liste interrompue ({e})"))?
+    } else {
+        std::fs::read(local_path(url)).map_err(|e| format!("Liste illisible ({e})"))?
+    };
+    iptv::parse(&String::from_utf8_lossy(&bytes), url).ok_or_else(|| "Cette liste ne contient aucune chaîne".to_string())
 }
 
 fn item_url(key: &str) -> String {

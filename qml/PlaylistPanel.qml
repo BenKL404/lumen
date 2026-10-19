@@ -27,7 +27,7 @@ Rectangle {
     signal closeRequested()
 
     function matches(index) {
-        return filter === "" || utils.fileName(playlist.items[index]).toLowerCase().indexOf(filter.toLowerCase()) >= 0
+        return filter === "" || (playlist.titles[index] || utils.fileName(playlist.items[index])).toLowerCase().indexOf(filter.toLowerCase()) >= 0
     }
 
     function moveSelected(to) {
@@ -187,7 +187,7 @@ Rectangle {
             }
             Text {
                 anchors { left: number.right; leftMargin: 6; right: durationText.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
-                text: panel.utils.fileName(row.modelData)
+                text: panel.playlist.titles[row.index] || panel.utils.fileName(row.modelData)
                 color: row.isCurrent ? panel.theme.accent : panel.theme.text
                 font.pixelSize: 13
                 elide: Text.ElideMiddle
