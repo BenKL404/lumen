@@ -405,32 +405,40 @@ Rectangle {
 
                     Component {
                         id: choiceControl
-                        Row {
-                            spacing: 4
-                            Repeater {
-                                model: row.r.options
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    readonly property bool selected: row.r.get() === modelData.value
-                                    width: optionText.implicitWidth + 18
-                                    height: 26
-                                    radius: 13
-                                    color: selected ? Qt.rgba(panel.theme.accent.r, panel.theme.accent.g, panel.theme.accent.b, 0.18)
-                                         : optionArea.containsMouse ? panel.theme.surfaceHover : panel.theme.subtle
-                                    border.color: selected ? panel.theme.accent : "transparent"
-                                    Text {
-                                        id: optionText
-                                        anchors.centerIn: parent
-                                        text: parent.modelData.label
-                                        color: parent.selected ? panel.theme.accent : panel.theme.text
-                                        font.pixelSize: 12
-                                    }
-                                    MouseArea {
-                                        id: optionArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: { row.r.set(parent.modelData.value); panel.changed() }
+                        // Sélecteur segmenté sobre : un cadre, l'option active sur un fond plus clair
+                        Rectangle {
+                            width: options.implicitWidth + 4
+                            height: 28
+                            radius: 6
+                            color: panel.theme.field
+                            border.color: panel.theme.border
+                            Row {
+                                id: options
+                                anchors.centerIn: parent
+                                Repeater {
+                                    model: row.r.options
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        readonly property bool selected: row.r.get() === modelData.value
+                                        width: optionText.implicitWidth + 20
+                                        height: 24
+                                        radius: 4
+                                        color: selected ? panel.theme.raised : "transparent"
+                                        Text {
+                                            id: optionText
+                                            anchors.centerIn: parent
+                                            text: parent.modelData.label
+                                            color: parent.selected || optionArea.containsMouse ? panel.theme.text : panel.theme.muted
+                                            font.pixelSize: 12
+                                            font.weight: parent.selected ? Font.DemiBold : Font.Normal
+                                        }
+                                        MouseArea {
+                                            id: optionArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: { row.r.set(parent.modelData.value); panel.changed() }
+                                        }
                                     }
                                 }
                             }

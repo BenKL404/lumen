@@ -99,19 +99,20 @@ Rectangle {
         property bool selected: false
         signal clicked()
 
-        width: chipText.implicitWidth + 18
+        // Même style sobre que les choix des préférences : fond plus clair pour l'option active
+        width: chipText.implicitWidth + 20
         height: 26
-        radius: 13
-        color: selected ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.18)
-             : chipArea.containsMouse ? theme.surfaceHover : theme.subtle
-        border.color: selected ? theme.accent : "transparent"
+        radius: 6
+        color: selected ? theme.raised : chipArea.containsMouse ? theme.subtle : "transparent"
+        border.color: selected ? "transparent" : theme.border
 
         Text {
             id: chipText
             anchors.centerIn: parent
             text: chip.label
-            color: chip.selected ? chip.theme.accent : chip.theme.text
+            color: chip.selected || chipArea.containsMouse ? chip.theme.text : chip.theme.muted
             font.pixelSize: 12
+            font.weight: chip.selected ? Font.DemiBold : Font.Normal
         }
         MouseArea {
             id: chipArea
