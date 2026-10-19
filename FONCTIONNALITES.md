@@ -27,14 +27,15 @@ L'objectif : la richesse et l'efficacité de PotPlayer, avec la finition d'une a
 | Police | Sans-serif moderne (Inter ou équivalent), chiffres à chasse fixe pour les durées |
 | Icônes | Jeu d'icônes vectorielles fines et homogènes (style Lucide) |
 
-La couleur d'accent sera personnalisable, avec un thème clair en option.
+La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (voir Personnalisation). Aucune couleur n'est écrite en dur dans l'interface : tout passe par les jetons du thème.
 
 ### Fenêtre
 - **Fenêtre sans bordure** avec barre de titre intégrée : nom du fichier, boutons réduire / agrandir / fermer.
-- Barre de titre qui disparaît en même temps que les contrôles.
+- En plein écran et en mode mini, la barre de titre disparaît en même temps que les contrôles.
 - **Toujours au premier plan** activable (épingle), comme dans PotPlayer.
 - **Mode mini** : petite fenêtre compacte sans contrôles, redimensionnable, idéale pour regarder en travaillant.
-- Redimensionnement intelligent qui respecte le format de la vidéo.
+- Redimensionnement intelligent qui respecte le format de la vidéo (option « Adapter la fenêtre à la vidéo »).
+- Taille minimale 640 × 400 : menus et panneaux restent dans la fenêtre et font défiler leur contenu quand la place manque.
 
 ### Barre de contrôle
 - Sous la vidéo en mode fenêtré ; en plein écran et en mode mini, panneau flottant en verre fumé qui apparaît au mouvement de la souris.
@@ -44,12 +45,18 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Barre de progression qui s'épaissit au survol, avec **miniature** et heure au-dessus du curseur.
 - **Repères de chapitres** visibles directement sur la barre de progression.
 - Barre de volume pouvant monter jusqu'à 130 %, avec indication visuelle au-delà de 100 %.
+- Peu de boutons, l'essentiel seulement : le reste passe par les menus et le clavier. Dans une fenêtre étroite, les boutons secondaires se masquent par paliers (aléatoire et répétition d'abord, puis pistes et réglages d'image, puis arrêt).
 
 ### Menus et panneaux
-- **Menu clic droit complet**, signature de PotPlayer : ouvrir, lecture, vidéo, audio, sous-titres, playlist, captures, paramètres… avec sous-menus, icônes et raccourcis affichés à droite.
-- **Playlist latérale** accolée à droite de la fenêtre : durées, élément en cours surligné en ambre, glisser-déposer pour réorganiser.
+- **Menu Lumen ⌄** (barre de titre) : ouvrir (fichier, dossier, vidéo en ligne, chaînes IPTV, sous-titres), puis les sous-menus **Lecture, Chapitres, Signets, Vitesse, Audio, Sous-titres, Vidéo**, l'affichage (playlist, plein écran, mode mini, premier plan), les préférences et les raccourcis.
+- **Menu clic droit complet**, signature de PotPlayer : les mêmes sous-menus, avec icônes et raccourcis affichés à droite.
+- **Playlist latérale** accolée à droite de la fenêtre : durées, glisser-déposer pour réorganiser, recherche. La ligne en cours est en orange avec un repère à gauche ; la ligne choisie est en gras ; aucun fond, le texte seul fait la différence. Pour une liste IPTV, chaque ligne porte le nom et le groupe de la chaîne.
+- **Panneaux posés au-dessus de la barre** : pistes audio et sous-titres, son (égaliseur 10 bandes, normalisation, décalage), réglages d'image.
 - **Panneau d'informations** (touche Tab) : codec, résolution, débit, images par seconde, décodage matériel actif ou non, à la manière de l'écran d'infos de PotPlayer.
-- **Paramètres** dans une fenêtre moderne à onglets (Général, Lecture, Vidéo, Audio, Sous-titres, Raccourcis, Apparence, Extensions), avec recherche intégrée.
+- **Préférences** (F5) : catégories Général, Lecture, Vidéo, Audio, Sous-titres, En ligne, Apparence, Extensions, Raccourcis, avec recherche intégrée. **Tous les réglages de l'application y figurent**, y compris ceux qu'on change en cours de lecture (volume, vitesse, égaliseur bande par bande, décalages audio et sous-titres, réglages d'image, liste IPTV).
+- **Raccourcis modifiables dans l'interface** (Préférences › Raccourcis) : + pour capturer une touche, clic pour en retirer une, ↺ pour revenir à l'origine. Une touche reprise à une autre action lui est retirée, sans conflit possible.
+- **Fenêtres modales** (préférences, raccourcis, vidéo en ligne, recherche de sous-titres) : un voile assombrit le reste et la vidéo ne réagit plus (clics, molette, raccourcis) tant qu'elles sont ouvertes ; Échap ou un clic à côté les ferme.
+- **Choix sobres** : les options exclusives (agrandissement, répétition, thème…) forment un sélecteur segmenté discret, l'option active en gras sur un fond un peu plus clair, sans couleur d'accent.
 
 ### OSD (messages à l'écran)
 - Messages discrets en haut à droite : volume, vitesse, saut, capture, piste changée.
@@ -81,16 +88,18 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Reste sur la dernière image à la fin de la vidéo au lieu de fermer le fichier.
 
 ### Ouverture de fichiers
-- Bouton « Ouvrir » ou touche **O** pour choisir un fichier.
-- Glisser-déposer d'une vidéo directement dans la fenêtre.
+- Touche **O** (fichier) ou **Ctrl+O** (dossier entier en playlist), menu Lumen ou clic droit.
+- Le bouton lecture ouvre le sélecteur de fichiers quand aucune vidéo n'est chargée.
+- Glisser-déposer d'une vidéo, d'un dossier, d'un lien ou d'une liste `.m3u` directement dans la fenêtre.
+- « Ouvrir avec Lumen » depuis le gestionnaire de fichiers, ou `lumen fichier|dossier|lien` dans un terminal.
 
 ### Contrôles
 - Double-clic sur la vidéo pour lecture / pause, triple-clic pour le plein écran (un simple clic ne fait rien, pour éviter les pauses par accident).
 - Molette de la souris pour régler le volume.
-- Barre de progression cliquable, avec l'heure affichée au survol.
-- Boutons pour reculer ou avancer de 10 secondes.
-- Bouton de vitesse (×1 → ×1,25 → ×1,5 → … → ×2).
-- Curseur de volume, capture d'écran et plein écran.
+- Barre de progression cliquable, avec l'heure et une miniature au survol.
+- Sauts courts et longs au clavier (5 s et 30 s par défaut, réglables dans les préférences).
+- Vitesse, capture d'écran et plein écran au clavier, dans les menus et dans les préférences (vitesse).
+- Curseur de volume sous la barre de progression.
 
 ### Interface
 - La barre de contrôle et le curseur de la souris disparaissent pendant la lecture, puis réapparaissent dès que la souris bouge.
@@ -102,8 +111,8 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | Touche | Action |
 |---|---|
 | Espace | Lecture / pause |
-| ← / → | Reculer / avancer de 5 s |
-| Ctrl + ← / → | Reculer / avancer de 30 s |
+| ← / → | Reculer / avancer (saut court, 5 s par défaut) |
+| Ctrl + ← / → | Reculer / avancer (saut long, 30 s par défaut) |
 | ↑ / ↓ | Volume ±5 % |
 | M | Muet |
 | F ou Entrée | Plein écran |
@@ -122,7 +131,7 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | L | Boucle A-B : début, fin, désactivation |
 | B | Ajouter un signet |
 | I | Réglages d'image (luminosité, contraste, saturation, gamma, teinte, zoom) |
-| F1 | Liste des raccourcis (modifiables dans settings.toml) |
+| F1 | Liste des raccourcis (« Modifier… » ouvre Préférences › Raccourcis) |
 | F5 | Préférences (comme PotPlayer) |
 | Ctrl + J | Rechercher des sous-titres en ligne (OpenSubtitles) |
 | Tab | Informations sur le fichier (codec, résolution, débit, décodage…) |
@@ -134,6 +143,10 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 | Ctrl + V | Coller un lien vidéo |
 | R / H | Répétition / lecture aléatoire |
 | Ctrl + O | Ouvrir un dossier |
+| Suppr | Retirer de la playlist |
+| Ctrl + Q | Quitter |
+
+Toutes ces touches se changent dans **Préférences › Raccourcis** (Échap reste réservé à la fermeture des menus, de la playlist et du plein écran).
 
 ---
 
@@ -166,12 +179,12 @@ La couleur d'accent sera personnalisable, avec un thème clair en option.
 - Contrôle par les touches multimédia du clavier et depuis le bureau (GNOME, KDE).
 - L'écran ne se met plus en veille pendant un film.
 - « Ouvrir avec Lumen » et lecteur par défaut du système.
-- Raccourcis personnalisables et fichier de configuration.
+- Raccourcis personnalisables (dans l'interface ou dans le fichier de configuration).
 
 ### ✅ v1.0 — La puissance
 - Filtres pour améliorer l'image (netteté, agrandissement haute qualité).
 - Égaliseur audio.
-- Lecture de vidéos en ligne et YouTube.
+- Lecture de vidéos en ligne et YouTube, y compris les **directs** (lien de la vidéo ou `youtube.com/@chaine/live`).
 - Chaînes IPTV : listes M3U (lien ou fichier) et comptes Xtream Codes, chaînes nommées dans la playlist.
 - Recherche automatique de sous-titres sur Internet.
 - Système d'extensions pour ajouter des fonctions.

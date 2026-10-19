@@ -8,6 +8,13 @@ Lecteur vidéo moderne et performant pour Linux, inspiré de PotPlayer.
 
 > Version 1.0 : toute la feuille de route est réalisée (voir [FONCTIONNALITES.md](FONCTIONNALITES.md)).
 
+En bref : lecture de tous les formats avec décodage matériel, reprise là où on s'est arrêté,
+playlist automatique des épisodes, vidéos et **directs YouTube**, **chaînes IPTV** (M3U, Xtream
+Codes), recherche de sous-titres en ligne, égaliseur et filtres d'image, thèmes et skins,
+**raccourcis modifiables dans l'interface**, intégration au bureau Linux (MPRIS, « Ouvrir avec »).
+
+<p align="center"><img src="assets/screenshots/lecture.png" width="720" alt="Lumen en cours de lecture"></p>
+
 ---
 
 ## Télécharger
@@ -124,6 +131,33 @@ yt-dlp -U   # mise à jour
 
 YouTube demande aussi un moteur JavaScript : Lumen trouve `deno` ou `node` (y compris via nvm).
 
+**Directs** : le lien d'une vidéo en direct, ou celui d'une chaîne suivi de `/live`
+(`https://www.youtube.com/@chaine/live`, toujours le direct en cours). Le compteur affiche le temps
+écoulé depuis le début de la diffusion ; la reprise de lecture ne s'applique pas aux directs.
+Liens directs vers un flux (`.mp4`, `.ts`, `.m3u8` HLS, `rtmp://`, `rtsp://`) acceptés aussi.
+Si une vidéo refuse de démarrer, mettre d'abord yt-dlp à jour (`yt-dlp -U`).
+
+---
+
+## Interface
+
+- **Barre de contrôle** : l'essentiel seulement. À gauche lecture/pause, arrêt, précédent,
+  suivant, aléatoire, répétition et le temps (clic : temps restant) ; à droite piste audio,
+  sous-titres, réglages d'image et playlist. Vitesse, capture et plein écran passent par le
+  clavier et les menus (plein écran : triple-clic sur la vidéo).
+- **Souris** : double-clic lecture/pause, triple-clic plein écran, molette volume, clic droit menu.
+  Un simple clic ne fait rien (pas de pause par accident).
+- **Menu Lumen ⌄** et **clic droit** : mêmes sous-menus Lecture, Chapitres, Signets, Vitesse,
+  Audio, Sous-titres, Vidéo. Dans une petite fenêtre, menus et panneaux défilent au lieu de déborder.
+- **Préférences (F5)** : *tous* les réglages, classés par catégorie (Général, Lecture, Vidéo, Audio,
+  Sous-titres, En ligne, Apparence, Extensions, Raccourcis) avec une recherche. On y retrouve aussi
+  ce qui se règle en cours de lecture : volume, vitesse, égaliseur bande par bande, décalages audio
+  et sous-titres, réglages d'image, liste IPTV.
+- **Fenêtres modales** (préférences, raccourcis, vidéo en ligne, sous-titres en ligne) : tant
+  qu'elles sont ouvertes, la vidéo ne réagit ni à la souris ni aux raccourcis ; Échap les ferme.
+- **Playlist** (F6) : accolée à droite ; ligne en cours en orange, ligne choisie en gras,
+  glisser-déposer, recherche, Suppr pour retirer.
+
 ---
 
 ## IPTV (chaînes en direct)
@@ -214,8 +248,11 @@ par Lumen (F1) : un script ne reçoit pas les touches, il réagit aux événemen
 
 | Fichier | Contenu |
 |---|---|
-| `~/.config/lumen/settings.toml` | Paramètres (volume, répétition, aléatoire, fenêtre, options) — modifiable à la main, Lumen fermé |
-| `~/.local/share/lumen/history.db` | Historique de lecture (positions, pistes, sous-titres) |
+| `~/.config/lumen/settings.toml` | Paramètres (volume, répétition, aléatoire, fenêtre, options), dernière liste IPTV (`iptv_list`, identifiants Xtream compris), raccourcis (`[raccourcis]`) — modifiable à la main, Lumen fermé |
+| `~/.config/lumen/skins/` | Skins (fichiers JSON) |
+| `~/.config/lumen/scripts/` | Extensions (scripts mpv `.lua`, `.js`) |
+| `~/.local/share/lumen/history.db` | Historique de lecture (positions, pistes, sous-titres, signets) |
+| `~/.local/share/lumen/subtitles/` | Sous-titres téléchargés quand le dossier de la vidéo n'est pas modifiable |
 
 ---
 
@@ -228,7 +265,8 @@ lumen/
 │   ├── main.rs            Point d'entrée : options d'environnement, fenêtre unique, chargement de l'interface
 │   ├── single_instance.rs Transmet le fichier à un Lumen déjà ouvert (MPRIS)
 │   └── bridge/            Logique en Rust exposée à QML : historique (SQLite), playlist, paramètres,
-│                          raccourcis, son, shaders, thèmes, extensions, sous-titres en ligne, MPRIS…
+│                          raccourcis, son, shaders, thèmes, extensions, sous-titres en ligne,
+│                          listes IPTV (iptv.rs), MPRIS, mise en veille…
 ├── cpp/                   Composant vidéo libmpv (mpvitem), miniatures, durée des fichiers
 ├── qml/                   Interface : Main.qml (fenêtre, thème, raccourcis, OSD) et ses panneaux
 ├── assets/                Logo, icônes, fichier .desktop, fiche AppStream, shaders
@@ -289,17 +327,19 @@ Signaux : `fileLoaded()`, `endOfFile()`, `loadFailed(raison)`, `scriptMessage(�
 - **Navigation** : miniatures au survol, chapitres, signets, boucle A-B
 - **Image et son** : luminosité, contraste…, netteté (AMD CAS), agrandissement (FSR),
   égaliseur 10 bandes, normalisation du volume
-- **En ligne** : YouTube et la plupart des sites (yt-dlp)
+- **En ligne** : YouTube et la plupart des sites (yt-dlp), directs YouTube, flux directs
+  (HLS, `.ts`, RTMP, RTSP), chaînes IPTV (listes M3U, comptes Xtream Codes)
 - **Bureau** : MPRIS (touches multimédia, applet), pas de mise en veille pendant un film,
   « Ouvrir avec », fenêtre unique, sélecteur de fichiers natif
-- **Interface** : inspirée de PotPlayer, playlist accolée, mode mini, fenêtre adaptée à la vidéo,
-  panneau d'informations, thèmes et skins, préférences (F5), raccourcis personnalisables (F1),
-  extensions (scripts mpv)
+- **Interface** : inspirée de PotPlayer, barre de contrôle épurée, menus à sous-menus, playlist
+  accolée, mode mini, fenêtre adaptée à la vidéo, panneau d'informations, thèmes et skins,
+  préférences complètes (F5), raccourcis modifiables dans l'interface, fenêtres modales qui
+  bloquent la vidéo, extensions (scripts mpv)
 
 ### Raccourcis clavier
 
-Liste complète et modifiable dans Lumen : **F1** (voir aussi la section « Raccourcis
-personnalisables »).
+Liste complète : **F1** ; modification : **Préférences › Raccourcis** (voir « Raccourcis
+personnalisables »). Liste détaillée dans [FONCTIONNALITES.md](FONCTIONNALITES.md).
 
 | Touche            | Action                        |
 |-------------------|-------------------------------|
@@ -312,14 +352,19 @@ personnalisables »).
 | Ctrl+U / Ctrl+V   | Vidéo en ligne / coller un lien |
 | F5 / F1           | Préférences / raccourcis      |
 | Tab               | Informations sur le fichier   |
+| F6                | Playlist                      |
+| E / I             | Son / réglages d'image        |
+| S                 | Capture d'écran               |
+| Ctrl+M            | Mode mini                     |
 
 ---
 
 ## 6. Idées pour la suite
 
 - Miniatures dans la playlist
-- Publication sur Flathub et l'AUR (fichiers prêts dans `packaging/`)
-- Captures d'écran dans la fiche AppStream
+- Publication sur Flathub (demande d'ajout à compléter) et sur l'AUR (fichiers prêts dans `packaging/`)
+- Guide des programmes (EPG) et logos des chaînes IPTV
+- Option « toutes les vidéos du dossier » pour la playlist automatique
 - Traductions de l'interface
 
 ---
