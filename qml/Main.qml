@@ -257,9 +257,6 @@ Window {
                 transcriber.busy
                     ? { label: "Annuler la génération (" + transcriber.progress + " %)", icon: "x", action: () => transcriber.cancel() }
                     : { label: "Générer les sous-titres (reconnaissance vocale)", icon: "audio-lines", action: () => root.generateSubtitles() },
-                { label: "Décaler de −0,1 s", shortcut: root.keyLabel("decalage_sous_titres_moins"), action: () => root.shiftSubDelay(-0.1) },
-                { label: "Décaler de +0,1 s", shortcut: root.keyLabel("decalage_sous_titres_plus"), action: () => root.shiftSubDelay(0.1) },
-                { label: "Réinitialiser le décalage", enabled: video.subDelay !== 0, action: () => root.shiftSubDelay(-video.subDelay) }
             ]) },
             { label: "Vidéo", icon: "monitor", enabled: has, submenu: [
                 { label: "Plein écran", icon: "maximize", shortcut: root.keyLabel("plein_ecran"), checked: root.fullscreen, action: () => root.toggleFullScreen() },

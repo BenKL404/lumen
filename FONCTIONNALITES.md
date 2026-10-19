@@ -51,9 +51,9 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 - **Menu Lumen ⌄** (barre de titre) : ouvrir (fichier, dossier, vidéo en ligne, chaînes IPTV, sous-titres), puis les sous-menus **Lecture, Chapitres, Signets, Vitesse, Audio, Sous-titres, Vidéo**, l'affichage (playlist, plein écran, mode mini, premier plan), les préférences et les raccourcis.
 - **Menu clic droit complet**, signature de PotPlayer : les mêmes sous-menus, avec icônes et raccourcis affichés à droite.
 - **Playlist latérale** accolée à droite de la fenêtre : durées, glisser-déposer pour réorganiser, recherche. La ligne en cours est en orange avec un repère à gauche ; la ligne choisie est en gras ; aucun fond, le texte seul fait la différence. Pour une liste IPTV, chaque ligne porte le nom et le groupe de la chaîne.
-- **Panneaux posés au-dessus de la barre** : pistes audio et sous-titres, son (égaliseur 10 bandes, normalisation, décalage), réglages d'image.
+- **Panneaux posés au-dessus de la barre** : pistes audio et sous-titres, son (égaliseur 10 bandes, normalisation), réglages d'image.
 - **Panneau d'informations** (touche Tab) : codec, résolution, débit, images par seconde, décodage matériel actif ou non, à la manière de l'écran d'infos de PotPlayer.
-- **Préférences** (F5) : catégories Général, Lecture, Vidéo, Audio, Sous-titres, En ligne, Apparence, Extensions, Raccourcis, avec recherche intégrée. **Tous les réglages de l'application y figurent**, y compris ceux qu'on change en cours de lecture (volume, vitesse, égaliseur bande par bande, décalages audio et sous-titres, réglages d'image, liste IPTV).
+- **Préférences** (F5) : catégories Général, Lecture, Vidéo, Audio, Sous-titres, En ligne, Apparence, Extensions, Raccourcis, avec recherche intégrée. **Tous les réglages de l'application y figurent**, y compris ceux qu'on change en cours de lecture (volume, vitesse, égaliseur bande par bande, réglages d'image, liste IPTV).
 - **Raccourcis modifiables dans l'interface** (Préférences › Raccourcis) : + pour capturer une touche, clic pour en retirer une, ↺ pour revenir à l'origine. Une touche reprise à une autre action lui est retirée, sans conflit possible.
 - **Fenêtres modales** (préférences, raccourcis, vidéo en ligne, recherche de sous-titres) : un voile assombrit le reste et la vidéo ne réagit plus (clics, molette, raccourcis) tant qu'elles sont ouvertes ; Échap ou un clic à côté les ferme.
 - **Choix sobres** : les options exclusives (agrandissement, répétition, thème…) forment un sélecteur segmenté discret, l'option active en gras sur un fond un peu plus clair, sans couleur d'accent.
@@ -137,7 +137,7 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 | Tab | Informations sur le fichier (codec, résolution, débit, décodage…) |
 | Ctrl + M | Mode mini |
 | Ctrl + U | Ouvrir une vidéo en ligne (YouTube…) |
-| E | Son : égaliseur, normalisation, décalage audio |
+| E | Son : égaliseur, normalisation |
 | N | Normaliser le volume (dialogues / explosions) |
 | Maj + Z / Maj + X | Décaler le son de −0,1 s / +0,1 s |
 | Ctrl + V | Coller un lien vidéo |

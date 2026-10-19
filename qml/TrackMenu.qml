@@ -23,10 +23,6 @@ Rectangle {
         video.command(["set", isSub ? "sid" : "aid", String(id)])
     }
 
-    function shiftDelay(step) {
-        video.subDelay = Math.round((video.subDelay + step) * 10) / 10
-    }
-
     width: 360
     // Hauteur limitée par la fenêtre (donnée par Main.qml) : au-delà, le contenu défile
     property real maxHeight: Number.POSITIVE_INFINITY
@@ -137,7 +133,7 @@ Rectangle {
                 bottomPadding: 6
             }
 
-            // ------------------------------------- Audio : égaliseur, normalisation, décalage
+            // ------------------------------------- Audio : égaliseur, normalisation
             Rectangle {
                 visible: !menu.isSub
                 width: parent.width
@@ -147,11 +143,11 @@ Rectangle {
             Entry {
                 theme: menu.theme
                 visible: !menu.isSub
-                label: "Égaliseur, normalisation et décalage…"
+                label: "Égaliseur et normalisation…"
                 onClicked: menu.audioSettingsRequested()
             }
 
-            // ------------------------------------- Sous-titres : fichier et décalage
+            // ------------------------------------- Sous-titres : fichier, recherche, génération
             Rectangle {
                 visible: menu.isSub
                 width: parent.width
@@ -179,35 +175,6 @@ Rectangle {
                 onClicked: menu.generateSubtitlesRequested()
             }
 
-            Item {
-                visible: menu.isSub
-                width: parent.width
-                height: 40
-
-                Text {
-                    anchors { left: parent.left; leftMargin: 28; verticalCenter: parent.verticalCenter }
-                    text: "Décalage"
-                    color: menu.theme.text
-                    font.pixelSize: 14
-                }
-                Row {
-                    anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                    spacing: 2
-
-                    IconButton { theme: menu.theme; icon: "minus"; onClicked: menu.shiftDelay(-0.1) }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 64
-                        horizontalAlignment: Text.AlignHCenter
-                        text: (menu.video.subDelay > 0 ? "+" : "") + menu.video.subDelay.toFixed(1) + " s"
-                        color: menu.video.subDelay !== 0 ? menu.theme.accent : menu.theme.text
-                        font.pixelSize: 14
-                        font.family: "monospace"
-                    }
-                    IconButton { theme: menu.theme; icon: "plus"; onClicked: menu.shiftDelay(0.1) }
-                    IconButton { theme: menu.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: menu.video.subDelay = 0 }
-                }
-            }
         }
     }
 }

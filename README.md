@@ -156,8 +156,8 @@ défaut) et la langue d'origine de la vidéo.
   Audio, Sous-titres, Vidéo. Dans une petite fenêtre, menus et panneaux défilent au lieu de déborder.
 - **Préférences (F5)** : *tous* les réglages, classés par catégorie (Général, Lecture, Vidéo, Audio,
   Sous-titres, En ligne, Apparence, Extensions, Raccourcis) avec une recherche. On y retrouve aussi
-  ce qui se règle en cours de lecture : volume, vitesse, égaliseur bande par bande, décalages audio
-  et sous-titres, réglages d'image, liste IPTV.
+  ce qui se règle en cours de lecture : volume, vitesse, égaliseur bande par bande, réglages
+  d'image, liste IPTV. Les décalages audio et sous-titres restent au clavier (Maj+Z / Maj+X, Z / X).
 - **Fenêtres modales** (préférences, raccourcis, vidéo en ligne, sous-titres en ligne) : tant
   qu'elles sont ouvertes, la vidéo ne réagit ni à la souris ni aux raccourcis ; Échap les ferme.
 - **Playlist** (F6) : accolée à droite ; ligne en cours en orange, ligne choisie en gras,
@@ -356,7 +356,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, `loadFailed(raison)`, `scriptMessage(�
   répétition, glisser-déposer, recherche, durées
 - **Pistes** : audio et sous-titres, sous-titres externes, recherche en ligne (OpenSubtitles),
   sous-titres générés par reconnaissance vocale (whisper.cpp), sous-titres automatiques de YouTube,
-  décalages audio et sous-titres
+  décalages audio et sous-titres au clavier
 - **Navigation** : miniatures au survol, chapitres, signets, boucle A-B
 - **Image et son** : luminosité, contraste…, netteté (AMD CAS), agrandissement (FSR),
   égaliseur 10 bandes, normalisation du volume

@@ -1,6 +1,6 @@
 import QtQuick
 
-// Son : normalisation du volume, égaliseur 10 bandes et décalage audio.
+// Son : normalisation du volume et égaliseur 10 bandes.
 // Les valeurs vivent dans `sound` (Main.qml), qui les applique à mpv et les mémorise.
 Rectangle {
     id: panel
@@ -17,10 +17,6 @@ Rectangle {
         const gains = sound.equalizer.slice()
         gains[index] = value
         sound.equalizer = gains
-    }
-
-    function shiftDelay(step) {
-        sound.delay = Math.round((sound.delay + step) * 10) / 10
     }
 
     width: 440
@@ -271,37 +267,6 @@ Rectangle {
                 }
             }
 
-            Rectangle { width: parent.width; height: 1; color: panel.theme.border }
-
-            // Décalage audio
-            Item {
-                width: parent.width
-                height: 34
-
-                Text {
-                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                    text: "Décalage audio"
-                    color: panel.theme.text
-                    font.pixelSize: 13
-                }
-                Row {
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                    spacing: 2
-
-                    IconButton { theme: panel.theme; icon: "minus"; onClicked: panel.shiftDelay(-0.1) }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 64
-                        horizontalAlignment: Text.AlignHCenter
-                        text: (panel.sound.delay > 0 ? "+" : "") + panel.sound.delay.toFixed(1) + " s"
-                        color: panel.sound.delay !== 0 ? panel.theme.accent : panel.theme.text
-                        font.pixelSize: 13
-                        font.family: "monospace"
-                    }
-                    IconButton { theme: panel.theme; icon: "plus"; onClicked: panel.shiftDelay(0.1) }
-                    IconButton { theme: panel.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: panel.sound.delay = 0 }
-                }
-            }
         }
     }
 }
