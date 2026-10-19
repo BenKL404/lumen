@@ -88,6 +88,23 @@ pub mod qobject {
         #[qinvokable]
         fn reload_shortcuts(self: Pin<&mut Settings>);
 
+        /// Remplace les touches d'une action (enregistré aussitôt). Les touches reprises à
+        /// d'autres actions leur sont retirées ; renvoie le nom de ces actions (« Muet, … »).
+        #[qinvokable]
+        fn set_keys(self: Pin<&mut Settings>, action: &QString, keys: &QStringList) -> QString;
+
+        /// Remet les touches par défaut d'une action (même retour que `set_keys`).
+        #[qinvokable]
+        fn reset_keys(self: Pin<&mut Settings>, action: &QString) -> QString;
+
+        /// Remet tous les raccourcis par défaut.
+        #[qinvokable]
+        fn reset_all_shortcuts(self: Pin<&mut Settings>);
+
+        /// Vrai si l'action a ses touches par défaut.
+        #[qinvokable]
+        fn has_default_keys(self: &Settings, action: &QString) -> bool;
+
         /// Adresse file:// de settings.toml, pour l'ouvrir dans un éditeur.
         #[qinvokable]
         fn file_url(self: &Settings) -> QString;
@@ -468,6 +485,51 @@ impl qobject::Settings {
 
     pub fn reload_shortcuts(mut self: Pin<&mut Self>) {
         let map = SettingsFile::load(&settings_path()).shortcuts;
+        let resolved = shortcuts::resolve(&map);
+        let version = self.rust().shortcuts_version + 1;
+        let mut rust = self.as_mut().rust_mut();
+        rust.shortcuts = map;
+        rust.resolved_shortcuts = resolved;
+        rust.shortcuts_version = version;
+        self.as_mut().shortcuts_version_changed();
+    }
+
+    pub fn set_keys(self: Pin<&mut Self>, action: &QString, keys: &QStringList) -> QString {
+        let keys: Vec<String> = QList::<QString>::from(keys).iter().map(|k| k.to_string()).collect();
+        self.assign_keys(&action.to_string(), keys)
+    }
+
+    pub fn reset_keys(self: Pin<&mut Self>, action: &QString) -> QString {
+        let action = action.to_string();
+        self.assign_keys(&action, shortcuts::default_keys(&action))
+    }
+
+    pub fn reset_all_shortcuts(self: Pin<&mut Self>) {
+        self.apply_shortcuts(shortcuts::defaults());
+    }
+
+    pub fn has_default_keys(&self, action: &QString) -> bool {
+        let action = action.to_string();
+        let current = self.rust().shortcuts.get(&action).map(|k| k.list()).unwrap_or_default();
+        current == shortcuts::default_keys(&action)
+    }
+
+    fn assign_keys(self: Pin<&mut Self>, action: &str, keys: Vec<String>) -> QString {
+        let mut map = shortcuts::merged(&self.rust().shortcuts);
+        let losers = shortcuts::assign(&mut map, action, keys);
+        self.apply_shortcuts(map);
+        QString::from(&losers.iter().map(|a| shortcuts::label(a)).collect::<Vec<_>>().join(", "))
+    }
+
+    /// Raccourcis modifiés dans l'interface : actifs aussitôt et écrits dans le fichier
+    /// (`save` garde ceux du fichier, pour ne pas écraser une modification à la main).
+    fn apply_shortcuts(mut self: Pin<&mut Self>, map: BTreeMap<String, Keys>) {
+        let path = settings_path();
+        let mut file = if path.exists() { SettingsFile::load(&path) } else { SettingsFile::from(self.rust()).sanitized() };
+        file.shortcuts = map.clone();
+        if let Err(e) = file.store(&path) {
+            eprintln!("Lumen : impossible d'enregistrer les raccourcis ({e})");
+        }
         let resolved = shortcuts::resolve(&map);
         let version = self.rust().shortcuts_version + 1;
         let mut rust = self.as_mut().rust_mut();

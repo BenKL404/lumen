@@ -144,9 +144,16 @@ Un lien `.m3u8` qui désigne un seul flux (HLS) se lit directement.
 
 ## Raccourcis personnalisables
 
-**F1** (ou menu Lumen › Raccourcis clavier…) affiche toutes les actions et leurs touches.
-Son bouton **Modifier…** ouvre `~/.config/lumen/settings.toml` (section `[raccourcis]`) dans
-l'éditeur de texte, et **Recharger** applique les changements sans relancer Lumen.
+**F5 › Raccourcis** (ou F1 › **Modifier…**) : chaque action avec ses touches.
+
+- **+** : appuyer sur la nouvelle touche (Échap annule) ; elle s'ajoute aux touches existantes.
+- **Clic sur une touche** : la retirer.
+- **↺** : revenir aux touches d'origine de l'action ; **Tout réinitialiser** pour toutes.
+
+Une touche déjà prise par une autre action lui est retirée (un message l'indique). Les
+changements s'appliquent aussitôt et sont enregistrés dans `~/.config/lumen/settings.toml`
+(section `[raccourcis]`), que l'on peut aussi modifier à la main puis appliquer avec
+**Recharger** :
 
 ```toml
 [raccourcis]

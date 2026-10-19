@@ -22,6 +22,84 @@ Rectangle {
 
     property string category: "general"
     property string search: ""
+    // Action dont on attend la nouvelle touche (vide : aucune capture en cours)
+    property string capturing: ""
+
+    onVisibleChanged: if (!visible) capturing = ""
+
+    function startCapture(action) {
+        capturing = action
+        keyCatcher.forceActiveFocus()
+    }
+
+    // Touche pressée -> notation Qt (« Ctrl+O », « F6 », « Space »…) ; vide pour une touche
+    // de modification seule (on attend la suite)
+    function keyName(event) {
+        const k = event.key
+        if ([Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_AltGr, Qt.Key_CapsLock].includes(k))
+            return ""
+        const named = {}
+        named[Qt.Key_Space] = "Space"; named[Qt.Key_Return] = "Return"; named[Qt.Key_Enter] = "Enter"
+        named[Qt.Key_Backspace] = "Backspace"; named[Qt.Key_Delete] = "Delete"; named[Qt.Key_Insert] = "Insert"
+        named[Qt.Key_Home] = "Home"; named[Qt.Key_End] = "End"; named[Qt.Key_PageUp] = "PgUp"; named[Qt.Key_PageDown] = "PgDown"
+        named[Qt.Key_Left] = "Left"; named[Qt.Key_Right] = "Right"; named[Qt.Key_Up] = "Up"; named[Qt.Key_Down] = "Down"
+        named[Qt.Key_Tab] = "Tab"; named[Qt.Key_Pause] = "Pause"; named[Qt.Key_Print] = "Print"
+        let base = ""
+        if (k >= Qt.Key_F1 && k <= Qt.Key_F35)
+            base = "F" + (k - Qt.Key_F1 + 1)
+        else if (named[k] !== undefined)
+            base = named[k]
+        else if ((k >= Qt.Key_A && k <= Qt.Key_Z) || (k >= Qt.Key_0 && k <= Qt.Key_9))
+            base = String.fromCharCode(k)
+        else if (event.text !== "" && event.text.charCodeAt(0) > 32)
+            base = event.text           // ponctuation : le caractère tapé ( . , ] [ … )
+        if (base === "")
+            return ""
+        const m = event.modifiers
+        const mods = []
+        if (m & Qt.ControlModifier) mods.push("Ctrl")
+        if (m & Qt.AltModifier) mods.push("Alt")
+        if (m & Qt.MetaModifier) mods.push("Meta")
+        // Maj compte pour les lettres et touches nommées ; pour la ponctuation, elle est déjà dans le caractère
+        if ((m & Qt.ShiftModifier) && (base.length > 1 || /[A-Z0-9]/.test(base))) mods.push("Shift")
+        return mods.concat([base]).join("+")
+    }
+
+    function addKey(action, key) {
+        const keys = Array.from(settings.keys(action))
+        if (keys.indexOf(key) < 0)
+            keys.push(key)
+        report(settings.setKeys(action, keys), key)
+    }
+
+    function removeKey(action, key) {
+        settings.setKeys(action, Array.from(settings.keys(action)).filter(k => k !== key))
+    }
+
+    function report(losers, key) {
+        app.osd(losers !== "" ? app.formatKey(key) + " retiré de : " + losers : "Raccourci enregistré")
+    }
+
+    // Reçoit la touche pendant une capture (Échap annule)
+    Item {
+        id: keyCatcher
+        Keys.onPressed: (event) => {
+            if (panel.capturing === "")
+                return
+            event.accepted = true
+            if (event.key === Qt.Key_Escape) {
+                panel.capturing = ""
+                return
+            }
+            const name = panel.keyName(event)
+            if (name === "")
+                return
+            const action = panel.capturing
+            panel.capturing = ""
+            panel.addKey(action, name)
+        }
+        onActiveFocusChanged: if (!activeFocus) panel.capturing = ""
+    }
 
     readonly property var categories: [
         { id: "general", label: "Général" },
@@ -159,9 +237,9 @@ Rectangle {
             { cat: "apparence", label: "Skins", desc: "Fichiers JSON partageables : couleurs d'un thème (exemple fourni)", type: "button",
               button: "Ouvrir le dossier", action: () => Qt.openUrlExternally(panel.utils.skinsFolderUrl()) },
 
-            { cat: "raccourcis", label: "Modifier les raccourcis", desc: "Section [raccourcis] de settings.toml",
-              type: "button", button: "Modifier…", action: () => { a.saveSettings(); Qt.openUrlExternally(s.fileUrl()) } },
-            { cat: "raccourcis", label: "Appliquer les modifications", desc: "Relit le fichier sans relancer Lumen",
+            { cat: "raccourcis", label: "Modifier un raccourci", desc: "+ : nouvelle touche ; clic sur une touche : la retirer ; ↺ : touches d'origine",
+              type: "button", button: "Tout réinitialiser", action: () => { s.resetAllShortcuts(); a.osd("Raccourcis par défaut rétablis") } },
+            { cat: "raccourcis", label: "Fichier des raccourcis", desc: "Section [raccourcis] de settings.toml, relue par « Recharger »",
               type: "button", button: "Recharger", action: () => { s.reloadShortcuts(); a.osd("Raccourcis rechargés") } }
         ]
         extensionsVersion
@@ -567,33 +645,91 @@ Rectangle {
                     Component {
                         id: keysControl
                         Row {
+                            id: keysRow
                             spacing: 6
-                            readonly property var keys: { panel.settings.shortcutsVersion; return panel.settings.keys(row.r.action_id) }
+                            readonly property string action: row.r.action_id
+                            readonly property var keys: { panel.settings.shortcutsVersion; return panel.settings.keys(action) }
+                            readonly property bool isDefault: { panel.settings.shortcutsVersion; return panel.settings.hasDefaultKeys(action) }
+                            readonly property bool capturing: panel.capturing === action
+
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                visible: parent.keys.length === 0
-                                text: "—"
+                                visible: keysRow.keys.length === 0 && !keysRow.capturing
+                                text: "Aucune touche"
                                 color: panel.theme.muted
-                                font.pixelSize: 13
+                                font.pixelSize: 12
                             }
+                            // Touches : un clic retire la touche
                             Repeater {
-                                model: parent.keys
+                                model: keysRow.keys
                                 delegate: Rectangle {
                                     required property string modelData
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.max(24, keyText.implicitWidth + 14)
-                                    height: 22
+                                    width: keyLabel.implicitWidth + 14 + (keyArea.containsMouse ? 16 : 0)
+                                    height: 24
                                     radius: 4
-                                    color: panel.theme.subtle
+                                    color: keyArea.containsMouse ? panel.theme.surfaceHover : panel.theme.subtle
                                     border.color: panel.theme.strong
                                     Text {
-                                        id: keyText
-                                        anchors.centerIn: parent
+                                        id: keyLabel
+                                        anchors { left: parent.left; leftMargin: 7; verticalCenter: parent.verticalCenter }
                                         text: panel.app.formatKey(parent.modelData)
                                         color: panel.theme.text
                                         font.pixelSize: 12
                                     }
+                                    Icon {
+                                        anchors { right: parent.right; rightMargin: 5; verticalCenter: parent.verticalCenter }
+                                        visible: keyArea.containsMouse
+                                        name: "x"
+                                        size: 11
+                                        color: panel.theme.muted
+                                    }
+                                    MouseArea {
+                                        id: keyArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: panel.removeKey(keysRow.action, parent.modelData)
+                                    }
                                 }
+                            }
+                            // Capture en cours
+                            Rectangle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: keysRow.capturing
+                                width: waitText.implicitWidth + 16
+                                height: 24
+                                radius: 4
+                                color: panel.theme.field
+                                border.color: panel.theme.accent
+                                Text {
+                                    id: waitText
+                                    anchors.centerIn: parent
+                                    text: "Appuie sur une touche… (Échap : annuler)"
+                                    color: panel.theme.text
+                                    font.pixelSize: 12
+                                }
+                            }
+                            IconButton {
+                                anchors.verticalCenter: parent.verticalCenter
+                                implicitWidth: 26
+                                implicitHeight: 26
+                                visible: !keysRow.capturing
+                                theme: panel.theme
+                                icon: "plus"
+                                iconSize: 14
+                                onClicked: panel.startCapture(keysRow.action)
+                            }
+                            IconButton {
+                                anchors.verticalCenter: parent.verticalCenter
+                                implicitWidth: 26
+                                implicitHeight: 26
+                                opacity: keysRow.isDefault ? 0 : 1
+                                enabled: !keysRow.isDefault
+                                theme: panel.theme
+                                icon: "rotate-ccw"
+                                iconSize: 13
+                                onClicked: panel.report(panel.settings.resetKeys(keysRow.action), "")
                             }
                         }
                     }

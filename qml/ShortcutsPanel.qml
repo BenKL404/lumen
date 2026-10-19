@@ -1,7 +1,8 @@
 import QtQuick
 
 // Fenêtre « Raccourcis clavier » : toutes les actions et leurs touches (F1).
-// Les touches se modifient dans settings.toml ; « Recharger » les applique aussitôt.
+// « Modifier… » ouvre les préférences (Raccourcis) ; « Recharger » relit settings.toml
+// après une modification à la main.
 Rectangle {
     id: panel
 

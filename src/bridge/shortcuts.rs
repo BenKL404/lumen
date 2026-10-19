@@ -84,6 +84,48 @@ impl Keys {
     }
 }
 
+impl From<Vec<String>> for Keys {
+    /// Aucune touche : chaîne vide (raccourci désactivé), comme à la main dans le fichier
+    fn from(keys: Vec<String>) -> Self {
+        match keys.len() {
+            0 => Keys::One(String::new()),
+            1 => Keys::One(keys.into_iter().next().unwrap_or_default()),
+            _ => Keys::Many(keys),
+        }
+    }
+}
+
+/// Touches par défaut d'une action
+pub fn default_keys(action: &str) -> Vec<String> {
+    DEFAULTS.iter().find(|(id, _, _)| *id == action).map_or(Vec::new(), |(_, _, keys)| keys.iter().map(|k| k.to_string()).collect())
+}
+
+/// Donne `keys` à `action` (choix fait dans les préférences) et retire ces touches des autres
+/// actions, pour qu'aucun conflit ne reste. Renvoie les actions qui ont perdu une touche.
+pub fn assign(map: &mut BTreeMap<String, Keys>, action: &str, keys: Vec<String>) -> Vec<String> {
+    let mut unique: Vec<String> = Vec::new();
+    for key in keys.into_iter().map(|k| k.trim().to_string()).filter(|k| !k.is_empty()) {
+        if !unique.iter().any(|u| normalized(u) == normalized(&key)) {
+            unique.push(key);
+        }
+    }
+    let taken: Vec<String> = unique.iter().map(|k| normalized(k)).collect();
+    let mut losers = Vec::new();
+    for (other, other_keys) in map.iter_mut() {
+        if other == action {
+            continue;
+        }
+        let list = other_keys.list();
+        let kept: Vec<String> = list.iter().filter(|k| !taken.contains(&normalized(k))).cloned().collect();
+        if kept.len() != list.len() {
+            *other_keys = Keys::from(kept);
+            losers.push(other.clone());
+        }
+    }
+    map.insert(action.to_string(), Keys::from(unique));
+    losers
+}
+
 /// Nom affiché d'une action
 pub fn label(action: &str) -> &'static str {
     DEFAULTS.iter().find(|(id, _, _)| *id == action).map_or("", |(_, label, _)| label)
@@ -168,6 +210,30 @@ mod tests {
 
     fn user(entries: &[(&str, Keys)]) -> BTreeMap<String, Keys> {
         entries.iter().map(|(a, k)| (a.to_string(), k.clone())).collect()
+    }
+
+    #[test]
+    fn assign_takes_key_from_other_action() {
+        let mut map = defaults();
+        // M (muet) donné à la capture : retiré de « muet », gardé une seule fois
+        let losers = assign(&mut map, "capture", vec!["S".into(), "m".into(), " M ".into()]);
+        assert_eq!(losers, vec!["muet".to_string()]);
+        assert_eq!(map["capture"], Keys::Many(vec!["S".into(), "m".into()]));
+        assert_eq!(map["muet"], Keys::One(String::new()));
+        let resolved = resolve(&map);
+        assert!(resolved.warnings.is_empty(), "{:?}", resolved.warnings);
+        assert_eq!(resolved.keys["muet"], Vec::<String>::new());
+        assert_eq!(resolved.keys["capture"], vec!["S".to_string(), "m".to_string()]);
+    }
+
+    #[test]
+    fn assign_keeps_other_keys_of_loser() {
+        let mut map = defaults();
+        let losers = assign(&mut map, "capture", vec!["Return".into()]);
+        assert_eq!(losers, vec!["plein_ecran".to_string()]);
+        assert_eq!(map["plein_ecran"], Keys::One("F".into()));
+        assert_eq!(default_keys("plein_ecran"), vec!["F".to_string(), "Return".to_string()]);
+        assert!(default_keys("inconnue").is_empty());
     }
 
     #[test]

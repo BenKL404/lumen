@@ -59,6 +59,8 @@ Window {
                                         ? playlist.titles[playlist.current] : video.mediaTitle
     readonly property bool modalOpen: urlPanel.visible || subtitleSearchPanel.visible
         || preferencesPanel.visible || shortcutsPanel.visible
+    // Capture d'une touche dans les préférences : aucun raccourci ne doit réagir
+    readonly property bool capturingKeys: preferencesPanel.capturing !== ""
     readonly property var modalKeys: ["preferences", "raccourcis", "ouvrir_url", "chercher_sous_titres"]
     property bool pinned: false
     property bool wasMaximized: false
@@ -1474,10 +1476,11 @@ Window {
         settings: settings
         formatKey: (key) => root.formatKey(key)
         onCloseRequested: visible = false
+        // Modification dans les préférences, catégorie Raccourcis
         onEditRequested: {
-            // Écrit le fichier (liste complète des actions) avant de l'ouvrir dans l'éditeur
-            root.saveSettings()
-            Qt.openUrlExternally(settings.fileUrl())
+            root.closePopups()
+            preferencesPanel.category = "raccourcis"
+            preferencesPanel.visible = true
         }
         onReloadRequested: {
             settings.reloadShortcuts()
@@ -1618,7 +1621,7 @@ Window {
             required property string modelData
             // Relues après « Recharger » (shortcutsVersion change)
             sequences: { settings.shortcutsVersion; return settings.keys(modelData) }
-            enabled: !root.modalOpen || root.modalKeys.includes(modelData)
+            enabled: !root.capturingKeys && (!root.modalOpen || root.modalKeys.includes(modelData))
             onActivated: root.keyActions[modelData]()
         }
     }
@@ -1709,6 +1712,7 @@ Window {
     // Échap n'est pas personnalisable : il ferme d'abord ce qui est ouvert
     Shortcut {
         sequence: "Escape"
+        enabled: !root.capturingKeys
         onActivated: {
             if (root.anyPopupOpen) {
                 root.closePopups()
