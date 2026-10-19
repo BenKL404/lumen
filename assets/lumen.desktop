@@ -3,8 +3,8 @@ Type=Application
 Name=Lumen
 GenericName=Lecteur vidéo
 GenericName[en]=Video Player
-Comment=Lecteur vidéo moderne et rapide, inspiré de PotPlayer
-Comment[en]=Fast, modern video player inspired by PotPlayer
+Comment=Lecteur vidéo moderne et rapide, à l’interface épurée
+Comment[en]=Fast, modern video player with a clean interface
 Icon=lumen
 # Remplacé par le chemin complet à l'installation (scripts/install.sh)
 Exec=lumen %f

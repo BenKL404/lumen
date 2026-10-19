@@ -2,7 +2,7 @@
 name = "lumen"
 version = "1.0.2"
 edition = "2021"
-description = "Lecteur vidéo moderne pour Linux, inspiré de PotPlayer"
+description = "Lecteur vidéo moderne et rapide pour Linux"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/BenKL404/lumen"
 

@@ -269,7 +269,7 @@ Signaux : `fileLoaded()`, `endOfFile()`, `loadFailed(raison)`, `scriptMessage(�
 - **En ligne** : YouTube et la plupart des sites (yt-dlp)
 - **Bureau** : MPRIS (touches multimédia, applet), pas de mise en veille pendant un film,
   « Ouvrir avec », fenêtre unique, sélecteur de fichiers natif
-- **Interface** : style PotPlayer, playlist accolée, mode mini, fenêtre adaptée à la vidéo,
+- **Interface** : inspirée de PotPlayer, playlist accolée, mode mini, fenêtre adaptée à la vidéo,
   panneau d'informations, thèmes et skins, préférences (F5), raccourcis personnalisables (F1),
   extensions (scripts mpv)
 

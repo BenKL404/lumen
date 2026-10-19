@@ -6,8 +6,8 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Lumen</name>
-  <summary>Fast, modern video player inspired by PotPlayer</summary>
-  <summary xml:lang="fr">Lecteur vidéo moderne et rapide, inspiré de PotPlayer</summary>
+  <summary>Fast, modern video player with a clean interface</summary>
+  <summary xml:lang="fr">Lecteur vidéo moderne et rapide, à l’interface épurée</summary>
 
   <developer id="io.github.benkl404">
     <name>Kokou Bernard KPEDZI</name>
