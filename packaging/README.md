@@ -52,11 +52,13 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder appstream assets/
 ```
 
 Permissions demandées (`finish-args`) : Wayland/X11, carte graphique, son, réseau (vidéos en
-ligne, sous-titres), mise en veille (`org.freedesktop.ScreenSaver`) et MPRIS. Fichiers : dossiers
-Vidéos, Téléchargements, Musique et Bureau (captures), disques externes (`/media`, `/run/media`,
-`/mnt`). Flathub refuse `--filesystem=host` sans dérogation : ailleurs, une vidéo ouverte passe par
-le portail de documents et s'ouvre seule (pas de playlist automatique des fichiers voisins ;
-sous-titres téléchargés enregistrés dans le dossier de données de Lumen).
+ligne, sous-titres), mise en veille (`org.freedesktop.ScreenSaver`) et MPRIS. Fichiers : lecture
+seule partout (`--filesystem=host:ro`, pour la playlist automatique des fichiers voisins et les
+sous-titres du même dossier, où que soit la vidéo) ; écriture dans Vidéos, Téléchargements,
+Musique, Bureau (captures) et sur les disques externes (`/media`, `/run/media`, `/mnt`) pour
+enregistrer les sous-titres téléchargés à côté de la vidéo (ailleurs : dossier de données de
+Lumen). `host:ro` demande une dérogation au linter de Flathub, à justifier dans la demande
+d'ajout (mpv et Haruna l'ont obtenue pour la même raison).
 
 ## AUR
 

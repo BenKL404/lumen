@@ -42,15 +42,15 @@
   <screenshots>
     <screenshot type="default">
       <caption>Watching a video</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/lecture.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/lecture.png</image>
     </screenshot>
     <screenshot>
       <caption>Playlist docked next to the video</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/playlist.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/playlist.png</image>
     </screenshot>
     <screenshot>
       <caption>Preferences</caption>
-      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.1/assets/screenshots/preferences.png</image>
+      <image>https://raw.githubusercontent.com/BenKL404/lumen/v1.0.2/assets/screenshots/preferences.png</image>
     </screenshot>
   </screenshots>
 
@@ -70,6 +70,12 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.2" date="2026-10-19">
+      <description>
+        <p>Flatpak: the automatic playlist of neighbouring files works wherever the video is (read-only access to files).</p>
+        <p xml:lang="fr">Flatpak : la playlist automatique des fichiers voisins fonctionne où que soit la vidéo (accès aux fichiers en lecture seule).</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-10-05">
       <description>
         <p>Flathub release: access limited to the usual video folders and external drives.</p>
