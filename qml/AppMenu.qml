@@ -62,17 +62,29 @@ Item {
 
         width: 290
         // Calculée depuis les entrées (et non depuis la colonne) : exacte dès l'ouverture,
-        // avant que les délégués soient créés, pour positionner le menu au bon endroit
-        height: 12 + model.reduce((h, e) => h + (e.separator ? 9 : 30), 0)
+        // avant que les délégués soient créés, pour positionner le menu au bon endroit.
+        // Limitée à la fenêtre : au-delà, les entrées défilent.
+        readonly property real fullHeight: 12 + model.reduce((h, e) => h + (e.separator ? 9 : 30), 0)
+        height: Math.min(fullHeight, menu.height - 8)
         radius: 10
         color: theme.menu
         border.color: theme.border
 
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons } // absorbe les clics
 
+        Flickable {
+            id: scroller
+            anchors { fill: parent; margins: 6 }
+            contentHeight: column.height
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            // Le sous-menu suit sa ligne : le fermer quand la liste défile
+            onContentYChanged: if (panel === main) menu.closeSubmenu()
+
         Column {
             id: column
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6 }
+            width: scroller.width
 
             Repeater {
                 model: panel.model
@@ -150,6 +162,7 @@ Item {
                     }
                 }
             }
+        }
         }
     }
 

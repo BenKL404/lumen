@@ -24,7 +24,9 @@ Rectangle {
     }
 
     width: 440
-    height: content.implicitHeight + 24
+    // Hauteur limitée par la fenêtre (donnée par Main.qml) : au-delà, le contenu défile
+    property real maxHeight: Number.POSITIVE_INFINITY
+    height: Math.min(content.implicitHeight + 24, maxHeight)
     radius: theme.radius
     color: theme.surface
     border.color: theme.border
@@ -123,173 +125,182 @@ Rectangle {
         }
     }
 
-    Column {
-        id: content
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-        spacing: 10
+    Flickable {
+        id: scroller
+        anchors { fill: parent; margins: 12 }
+        contentHeight: content.implicitHeight
+        clip: true
+        interactive: contentHeight > height
+        boundsBehavior: Flickable.StopAtBounds
 
-        // En-tête
-        Item {
-            width: parent.width
-            height: 28
+        Column {
+            id: content
+            width: scroller.width
+            spacing: 10
 
-            Text {
-                anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                text: "Son"
-                color: panel.theme.muted
-                font.pixelSize: 12
-                font.weight: Font.Medium
-            }
-            IconButton {
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                implicitHeight: 28
-                theme: panel.theme
-                icon: "x"
-                iconSize: 14
-                onClicked: panel.closeRequested()
-            }
-        }
+            // En-tête
+            Item {
+                width: parent.width
+                height: 28
 
-        // Normalisation : interrupteur
-        Item {
-            width: parent.width
-            height: 40
-
-            Column {
-                anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                spacing: 2
                 Text {
-                    text: "Normaliser le volume"
+                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                    text: "Son"
+                    color: panel.theme.muted
+                    font.pixelSize: 12
+                    font.weight: Font.Medium
+                }
+                IconButton {
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    implicitHeight: 28
+                    theme: panel.theme
+                    icon: "x"
+                    iconSize: 14
+                    onClicked: panel.closeRequested()
+                }
+            }
+
+            // Normalisation : interrupteur
+            Item {
+                width: parent.width
+                height: 40
+
+                Column {
+                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                    spacing: 2
+                    Text {
+                        text: "Normaliser le volume"
+                        color: panel.theme.text
+                        font.pixelSize: 13
+                    }
+                    Text {
+                        text: "Dialogues plus audibles, explosions moins fortes"
+                        color: panel.theme.muted
+                        font.pixelSize: 11
+                    }
+                }
+                Rectangle {
+                    id: toggle
+                    anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
+                    width: 40
+                    height: 22
+                    radius: 11
+                    color: panel.sound.normalize ? panel.theme.accent : panel.theme.track
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
+                    Rectangle {
+                        y: 3
+                        x: panel.sound.normalize ? parent.width - width - 3 : 3
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: "#FFFFFF"
+                        Behavior on x { NumberAnimation { duration: 120 } }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: panel.sound.normalize = !panel.sound.normalize
+                    }
+                }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: panel.theme.border }
+
+            // Égaliseur : préréglages
+            Item {
+                width: parent.width
+                height: 26
+
+                Text {
+                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                    text: "Égaliseur"
                     color: panel.theme.text
                     font.pixelSize: 13
                 }
-                Text {
-                    text: "Dialogues plus audibles, explosions moins fortes"
-                    color: panel.theme.muted
-                    font.pixelSize: 11
+                Row {
+                    anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
+                    spacing: 5
+
+                    Repeater {
+                        model: panel.utils.equalizerPresets()
+                        delegate: Chip {
+                            required property string modelData
+                            theme: panel.theme
+                            label: modelData
+                            readonly property var gains: Array.from(panel.utils.equalizerPreset(modelData))
+                            selected: JSON.stringify(gains) === JSON.stringify(panel.sound.equalizer)
+                            onClicked: panel.sound.equalizer = gains
+                        }
+                    }
                 }
             }
-            Rectangle {
-                id: toggle
-                anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
-                width: 40
-                height: 22
-                radius: 11
-                color: panel.sound.normalize ? panel.theme.accent : panel.theme.track
-                Behavior on color { ColorAnimation { duration: 120 } }
 
-                Rectangle {
-                    y: 3
-                    x: panel.sound.normalize ? parent.width - width - 3 : 3
-                    width: 16
-                    height: 16
-                    radius: 8
-                    color: "#FFFFFF"
-                    Behavior on x { NumberAnimation { duration: 120 } }
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: panel.sound.normalize = !panel.sound.normalize
-                }
-            }
-        }
-
-        Rectangle { width: parent.width; height: 1; color: panel.theme.border }
-
-        // Égaliseur : préréglages
-        Item {
-            width: parent.width
-            height: 26
-
-            Text {
-                anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                text: "Égaliseur"
-                color: panel.theme.text
-                font.pixelSize: 13
-            }
+            // Égaliseur : bandes
             Row {
-                anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter }
-                spacing: 5
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 10
 
                 Repeater {
-                    model: panel.utils.equalizerPresets()
-                    delegate: Chip {
-                        required property string modelData
-                        theme: panel.theme
-                        label: modelData
-                        readonly property var gains: Array.from(panel.utils.equalizerPreset(modelData))
-                        selected: JSON.stringify(gains) === JSON.stringify(panel.sound.equalizer)
-                        onClicked: panel.sound.equalizer = gains
+                    model: 10
+                    delegate: Column {
+                        id: band
+                        required property int index
+                        readonly property int gain: panel.sound.equalizer[index] || 0
+                        spacing: 4
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: (band.gain > 0 ? "+" : "") + band.gain
+                            color: band.gain !== 0 ? panel.theme.accent : panel.theme.muted
+                            font.pixelSize: 10
+                            font.family: "monospace"
+                        }
+                        EqSlider {
+                            theme: panel.theme
+                            value: band.gain
+                            onMoved: (v) => panel.setBand(band.index, v)
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: panel.bandLabels[band.index]
+                            color: panel.theme.muted
+                            font.pixelSize: 10
+                        }
                     }
                 }
             }
-        }
 
-        // Égaliseur : bandes
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 10
+            Rectangle { width: parent.width; height: 1; color: panel.theme.border }
 
-            Repeater {
-                model: 10
-                delegate: Column {
-                    id: band
-                    required property int index
-                    readonly property int gain: panel.sound.equalizer[index] || 0
-                    spacing: 4
+            // Décalage audio
+            Item {
+                width: parent.width
+                height: 34
 
+                Text {
+                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                    text: "Décalage audio"
+                    color: panel.theme.text
+                    font.pixelSize: 13
+                }
+                Row {
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    spacing: 2
+
+                    IconButton { theme: panel.theme; icon: "minus"; onClicked: panel.shiftDelay(-0.1) }
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: (band.gain > 0 ? "+" : "") + band.gain
-                        color: band.gain !== 0 ? panel.theme.accent : panel.theme.muted
-                        font.pixelSize: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 64
+                        horizontalAlignment: Text.AlignHCenter
+                        text: (panel.sound.delay > 0 ? "+" : "") + panel.sound.delay.toFixed(1) + " s"
+                        color: panel.sound.delay !== 0 ? panel.theme.accent : panel.theme.text
+                        font.pixelSize: 13
                         font.family: "monospace"
                     }
-                    EqSlider {
-                        theme: panel.theme
-                        value: band.gain
-                        onMoved: (v) => panel.setBand(band.index, v)
-                    }
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: panel.bandLabels[band.index]
-                        color: panel.theme.muted
-                        font.pixelSize: 10
-                    }
+                    IconButton { theme: panel.theme; icon: "plus"; onClicked: panel.shiftDelay(0.1) }
+                    IconButton { theme: panel.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: panel.sound.delay = 0 }
                 }
-            }
-        }
-
-        Rectangle { width: parent.width; height: 1; color: panel.theme.border }
-
-        // Décalage audio
-        Item {
-            width: parent.width
-            height: 34
-
-            Text {
-                anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                text: "Décalage audio"
-                color: panel.theme.text
-                font.pixelSize: 13
-            }
-            Row {
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                spacing: 2
-
-                IconButton { theme: panel.theme; icon: "minus"; onClicked: panel.shiftDelay(-0.1) }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 64
-                    horizontalAlignment: Text.AlignHCenter
-                    text: (panel.sound.delay > 0 ? "+" : "") + panel.sound.delay.toFixed(1) + " s"
-                    color: panel.sound.delay !== 0 ? panel.theme.accent : panel.theme.text
-                    font.pixelSize: 13
-                    font.family: "monospace"
-                }
-                IconButton { theme: panel.theme; icon: "plus"; onClicked: panel.shiftDelay(0.1) }
-                IconButton { theme: panel.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: panel.sound.delay = 0 }
             }
         }
     }

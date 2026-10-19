@@ -1327,6 +1327,7 @@ Window {
     TrackMenu {
         id: trackMenu
         anchors { right: controls.right; bottom: controls.top; bottomMargin: 10; rightMargin: controls.floating ? 0 : 10 }
+        maxHeight: controls.y - 20 - (root.immersive ? 0 : titleBar.height)
         visible: false
         video: video
         utils: utils
@@ -1345,6 +1346,7 @@ Window {
     AudioPanel {
         id: audioPanel
         anchors { right: controls.right; bottom: controls.top; bottomMargin: 10; rightMargin: controls.floating ? 0 : 10 }
+        maxHeight: controls.y - 20 - (root.immersive ? 0 : titleBar.height)
         visible: false
         theme: root.theme
         sound: root.sound
@@ -1355,6 +1357,7 @@ Window {
     ImagePanel {
         id: imagePanel
         anchors { right: controls.right; bottom: controls.top; bottomMargin: 10; rightMargin: controls.floating ? 0 : 10 }
+        maxHeight: controls.y - 20 - (root.immersive ? 0 : titleBar.height)
         visible: false
         theme: root.theme
         image: root.image
@@ -1390,6 +1393,7 @@ Window {
     UrlPanel {
         id: urlPanel
         anchors.centerIn: parent
+        width: Math.min(560, parent.width - 40)
         visible: false
         theme: root.theme
         onAccepted: (url) => {
@@ -1422,6 +1426,7 @@ Window {
     SubtitleSearchPanel {
         id: subtitleSearchPanel
         anchors.centerIn: parent
+        width: Math.min(640, parent.width - 40)
         height: Math.min(500, parent.height - 60)
         visible: false
         theme: root.theme

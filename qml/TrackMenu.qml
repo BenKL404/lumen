@@ -24,7 +24,9 @@ Rectangle {
     }
 
     width: 360
-    height: content.implicitHeight + 20
+    // Hauteur limitée par la fenêtre (donnée par Main.qml) : au-delà, le contenu défile
+    property real maxHeight: Number.POSITIVE_INFINITY
+    height: Math.min(content.implicitHeight + 20, maxHeight)
     radius: theme.radius
     color: theme.surface
     border.color: menu.theme.subtle
@@ -77,114 +79,123 @@ Rectangle {
         }
     }
 
-    Column {
-        id: content
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
-        spacing: 2
+    Flickable {
+        id: scroller
+        anchors { fill: parent; margins: 10 }
+        contentHeight: content.implicitHeight
+        clip: true
+        interactive: contentHeight > height
+        boundsBehavior: Flickable.StopAtBounds
 
-        Text {
-            text: menu.isSub ? "Sous-titres" : "Pistes audio"
-            color: menu.theme.muted
-            font.pixelSize: 12
-            font.weight: Font.Medium
-            leftPadding: 12
-            topPadding: 4
-            bottomPadding: 6
-        }
-
-        Entry {
-            theme: menu.theme
-            visible: menu.isSub
-            label: "Désactivés"
-            selected: !menu.tracks.some(t => t.selected)
-            onClicked: menu.video.command(["set", "sid", "no"])
-        }
-
-        Repeater {
-            model: menu.tracks
-            delegate: Entry {
-                theme: menu.theme
-                required property var modelData
-                label: menu.utils.trackLabel(modelData.id, modelData.title || "", modelData.lang || "",
-                                             modelData.codec || "", modelData["demux-channel-count"] || 0)
-                detail: modelData.external ? "Externe" : (modelData["default"] ? "Par défaut" : "")
-                selected: modelData.selected === true
-                onClicked: menu.select(modelData.id)
-            }
-        }
-
-        Text {
-            visible: !menu.isSub && menu.tracks.length === 0
-            text: "Aucune piste audio"
-            color: menu.theme.muted
-            font.pixelSize: 14
-            leftPadding: 28
-            topPadding: 6
-            bottomPadding: 6
-        }
-
-        // ------------------------------------- Audio : égaliseur, normalisation, décalage
-        Rectangle {
-            visible: !menu.isSub
-            width: parent.width
-            height: 1
-            color: menu.theme.raised
-        }
-        Entry {
-            theme: menu.theme
-            visible: !menu.isSub
-            label: "Égaliseur, normalisation et décalage…"
-            onClicked: menu.audioSettingsRequested()
-        }
-
-        // ------------------------------------- Sous-titres : fichier et décalage
-        Rectangle {
-            visible: menu.isSub
-            width: parent.width
-            height: 1
-            color: menu.theme.raised
-        }
-
-        Entry {
-            theme: menu.theme
-            visible: menu.isSub
-            label: "Ajouter un fichier de sous-titres…"
-            onClicked: menu.addSubtitleRequested()
-        }
-        Entry {
-            theme: menu.theme
-            visible: menu.isSub
-            label: "Rechercher en ligne…"
-            onClicked: menu.searchSubtitlesRequested()
-        }
-
-        Item {
-            visible: menu.isSub
-            width: parent.width
-            height: 40
+        Column {
+            id: content
+            width: scroller.width
+            spacing: 2
 
             Text {
-                anchors { left: parent.left; leftMargin: 28; verticalCenter: parent.verticalCenter }
-                text: "Décalage"
-                color: menu.theme.text
-                font.pixelSize: 14
+                text: menu.isSub ? "Sous-titres" : "Pistes audio"
+                color: menu.theme.muted
+                font.pixelSize: 12
+                font.weight: Font.Medium
+                leftPadding: 12
+                topPadding: 4
+                bottomPadding: 6
             }
-            Row {
-                anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                spacing: 2
 
-                IconButton { theme: menu.theme; icon: "minus"; onClicked: menu.shiftDelay(-0.1) }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 64
-                    horizontalAlignment: Text.AlignHCenter
-                    text: (menu.video.subDelay > 0 ? "+" : "") + menu.video.subDelay.toFixed(1) + " s"
-                    color: menu.video.subDelay !== 0 ? menu.theme.accent : menu.theme.text
-                    font.pixelSize: 14
-                    font.family: "monospace"
+            Entry {
+                theme: menu.theme
+                visible: menu.isSub
+                label: "Désactivés"
+                selected: !menu.tracks.some(t => t.selected)
+                onClicked: menu.video.command(["set", "sid", "no"])
+            }
+
+            Repeater {
+                model: menu.tracks
+                delegate: Entry {
+                    theme: menu.theme
+                    required property var modelData
+                    label: menu.utils.trackLabel(modelData.id, modelData.title || "", modelData.lang || "",
+                                                 modelData.codec || "", modelData["demux-channel-count"] || 0)
+                    detail: modelData.external ? "Externe" : (modelData["default"] ? "Par défaut" : "")
+                    selected: modelData.selected === true
+                    onClicked: menu.select(modelData.id)
                 }
-                IconButton { theme: menu.theme; icon: "plus"; onClicked: menu.shiftDelay(0.1) }
-                IconButton { theme: menu.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: menu.video.subDelay = 0 }
+            }
+
+            Text {
+                visible: !menu.isSub && menu.tracks.length === 0
+                text: "Aucune piste audio"
+                color: menu.theme.muted
+                font.pixelSize: 14
+                leftPadding: 28
+                topPadding: 6
+                bottomPadding: 6
+            }
+
+            // ------------------------------------- Audio : égaliseur, normalisation, décalage
+            Rectangle {
+                visible: !menu.isSub
+                width: parent.width
+                height: 1
+                color: menu.theme.raised
+            }
+            Entry {
+                theme: menu.theme
+                visible: !menu.isSub
+                label: "Égaliseur, normalisation et décalage…"
+                onClicked: menu.audioSettingsRequested()
+            }
+
+            // ------------------------------------- Sous-titres : fichier et décalage
+            Rectangle {
+                visible: menu.isSub
+                width: parent.width
+                height: 1
+                color: menu.theme.raised
+            }
+
+            Entry {
+                theme: menu.theme
+                visible: menu.isSub
+                label: "Ajouter un fichier de sous-titres…"
+                onClicked: menu.addSubtitleRequested()
+            }
+            Entry {
+                theme: menu.theme
+                visible: menu.isSub
+                label: "Rechercher en ligne…"
+                onClicked: menu.searchSubtitlesRequested()
+            }
+
+            Item {
+                visible: menu.isSub
+                width: parent.width
+                height: 40
+
+                Text {
+                    anchors { left: parent.left; leftMargin: 28; verticalCenter: parent.verticalCenter }
+                    text: "Décalage"
+                    color: menu.theme.text
+                    font.pixelSize: 14
+                }
+                Row {
+                    anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                    spacing: 2
+
+                    IconButton { theme: menu.theme; icon: "minus"; onClicked: menu.shiftDelay(-0.1) }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 64
+                        horizontalAlignment: Text.AlignHCenter
+                        text: (menu.video.subDelay > 0 ? "+" : "") + menu.video.subDelay.toFixed(1) + " s"
+                        color: menu.video.subDelay !== 0 ? menu.theme.accent : menu.theme.text
+                        font.pixelSize: 14
+                        font.family: "monospace"
+                    }
+                    IconButton { theme: menu.theme; icon: "plus"; onClicked: menu.shiftDelay(0.1) }
+                    IconButton { theme: menu.theme; icon: "rotate-ccw"; iconSize: 16; onClicked: menu.video.subDelay = 0 }
+                }
             }
         }
     }
