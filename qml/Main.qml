@@ -11,7 +11,9 @@ Window {
     width: settings.windowWidth
     height: settings.windowHeight
     // Le mode mini autorise une fenêtre bien plus petite
-    minimumWidth: mini ? 240 : 640
+    // Avec la playlist accolée : la vidéo garde au moins `minVideoWidth` (dans la limite de l'écran)
+    minimumWidth: mini ? 240 : Math.min(Math.max(640, playlistAttached ? minVideoWidth + attachedWidth : 0),
+                                        Screen.desktopAvailableWidth)
     minimumHeight: mini ? 135 : 400
     visible: true
     color: theme.background
@@ -79,9 +81,14 @@ Window {
     property int attachedWidth: 0
     // Largeur de la playlist (accolée ou flottante), réglée en glissant son bord gauche
     property int playlistWidth: settings.playlistWidth
+    // Largeur minimale laissée à la vidéo à côté de la playlist ; sur un petit écran, c'est
+    // la playlist qui rétrécit (jusqu'à 240 px)
+    readonly property int minVideoWidth: 400
+    readonly property int playlistShownWidth: immersive ? Math.min(playlistWidth, width * 0.6)
+                                                        : Math.max(240, Math.min(playlistWidth, width - minVideoWidth))
 
     function resizePlaylist(w) {
-        const maxWidth = Math.min(900, width - (immersive ? 200 : 320))
+        const maxWidth = Math.min(900, immersive ? width * 0.6 : width - minVideoWidth)
         w = Math.round(Math.max(240, Math.min(w, maxWidth)))
         playlistWidth = w
         // Accolée : la fenêtre garde sa taille, la vidéo cède la place
@@ -589,7 +596,9 @@ Window {
             return
         if (visibility === Window.Windowed) {
             if (open) {
-                attachedWidth = playlistWidth
+                // La fenêtre s'élargit autant que l'écran le permet (`attachedWidth` : ce gain, rendu
+                // à la fermeture) ; le reste est pris sur la vidéo, qui garde `minVideoWidth`
+                attachedWidth = Math.max(0, Math.min(playlistWidth, Screen.desktopAvailableWidth - width))
                 width += attachedWidth
             } else if (attachedWidth > 0) {
                 width -= attachedWidth
@@ -1310,7 +1319,7 @@ Window {
     PlaylistPanel {
         id: playlistPanel
         anchors { top: root.immersive || root.playlistAttached ? parent.top : titleBar.bottom; bottom: parent.bottom }
-        width: root.immersive ? Math.min(root.playlistWidth, root.width * 0.6) : root.playlistWidth
+        width: root.playlistShownWidth
         x: open ? root.width - width : root.width
         visible: open || x < root.width
         Behavior on x {

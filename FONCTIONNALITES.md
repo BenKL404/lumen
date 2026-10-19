@@ -50,7 +50,7 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 ### Menus et panneaux
 - **Menu Lumen ⌄** (barre de titre) : ouvrir (fichier, dossier, vidéo en ligne, chaînes IPTV, sous-titres), puis les sous-menus **Lecture, Chapitres, Signets, Vitesse, Audio, Sous-titres, Vidéo**, l'affichage (playlist, plein écran, mode mini, premier plan), les préférences et les raccourcis.
 - **Menu clic droit complet**, signature de PotPlayer : les mêmes sous-menus, avec icônes et raccourcis affichés à droite.
-- **Playlist latérale** accolée à droite de la fenêtre, **largeur réglable** en glissant son bord gauche (mémorisée) : durées, glisser-déposer pour réorganiser, recherche. La ligne en cours est en orange avec un repère à gauche ; la ligne choisie est en gras ; aucun fond, le texte seul fait la différence. Pour une liste IPTV, chaque ligne porte le nom et le groupe de la chaîne.
+- **Playlist latérale** accolée à droite de la fenêtre, **largeur réglable** en glissant son bord gauche (mémorisée) ; la vidéo garde toujours au moins 400 px, c'est la playlist qui rétrécit sur un petit écran : durées, glisser-déposer pour réorganiser, recherche. La ligne en cours est en orange avec un repère à gauche ; la ligne choisie est en gras ; aucun fond, le texte seul fait la différence. Pour une liste IPTV, chaque ligne porte le nom et le groupe de la chaîne.
 - Panneaux et fenêtres **opaques**, de la même couleur que la playlist.
 - **Panneaux posés au-dessus de la barre** : pistes audio et sous-titres, son (égaliseur 10 bandes, normalisation), réglages d'image.
 - **Panneau d'informations** (touche Tab) : codec, résolution, débit, images par seconde, décodage matériel actif ou non, à la manière de l'écran d'infos de PotPlayer.
