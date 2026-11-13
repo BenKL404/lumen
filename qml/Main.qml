@@ -131,6 +131,10 @@ Window {
 
     // Paramètres de la session précédente, appliqués une fois la fenêtre créée
     Component.onCompleted: {
+        // Playlist du lancement précédent (un fichier passé en argument la remplace ensuite
+        // s'il n'en fait pas partie, comme dans une fenêtre déjà ouverte)
+        if (settings.restorePlaylist)
+            playlist.restore()
         video.volume = settings.volume
         video.muted = settings.muted
         imageKeys.forEach(k => image[k] = settings[k])
@@ -157,6 +161,8 @@ Window {
     }
 
     function saveSettings() {
+        if (settings.restorePlaylist)
+            playlist.save()
         settings.volume = video.volume
         settings.muted = video.muted
         settings.repeatMode = playlist.repeatMode
@@ -676,6 +682,8 @@ Window {
 
     Connections {
         target: playlist
+        // Enregistrée à chaque modification : conservée même si Lumen est tué
+        function onItemsChanged() { if (settings.restorePlaylist) playlist.save() }
         function onListLoaded(first, count) {
             settings.iptvList = root.pendingList
             root.osd(count + (count > 1 ? " chaînes" : " chaîne"))

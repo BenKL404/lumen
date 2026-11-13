@@ -28,6 +28,7 @@ pub mod qobject {
         #[qproperty(bool, playlist_open)]
         #[qproperty(bool, resume_playback)]
         #[qproperty(bool, auto_playlist)]
+        #[qproperty(bool, restore_playlist)]
         #[qproperty(bool, single_instance)]
         // Réglages d'image : -100…100, zoom en % (25…400)
         #[qproperty(i32, brightness)]
@@ -147,6 +148,8 @@ pub struct SettingsFile {
     pub resume_playback: bool,
     /// Ajouter à la playlist les fichiers du même nom (épisodes, parties…)
     pub auto_playlist: bool,
+    /// Retrouver la playlist du lancement précédent au démarrage
+    pub restore_playlist: bool,
     /// Ouvrir les fichiers dans la fenêtre Lumen déjà ouverte plutôt qu'une nouvelle
     pub single_instance: bool,
     /// Réglages d'image, de -100 à 100 (0 : neutre)
@@ -214,6 +217,7 @@ impl Default for SettingsFile {
             playlist_open: false,
             resume_playback: true,
             auto_playlist: true,
+            restore_playlist: true,
             single_instance: true,
             brightness: 0,
             contrast: 0,
@@ -343,6 +347,7 @@ pub struct SettingsRust {
     playlist_open: bool,
     resume_playback: bool,
     auto_playlist: bool,
+    restore_playlist: bool,
     single_instance: bool,
     brightness: i32,
     contrast: i32,
@@ -389,6 +394,7 @@ impl From<SettingsFile> for SettingsRust {
             playlist_open: f.playlist_open,
             resume_playback: f.resume_playback,
             auto_playlist: f.auto_playlist,
+            restore_playlist: f.restore_playlist,
             single_instance: f.single_instance,
             brightness: f.brightness,
             contrast: f.contrast,
@@ -449,6 +455,7 @@ impl From<&SettingsRust> for SettingsFile {
             playlist_open: s.playlist_open,
             resume_playback: s.resume_playback,
             auto_playlist: s.auto_playlist,
+            restore_playlist: s.restore_playlist,
             single_instance: s.single_instance,
             brightness: s.brightness,
             contrast: s.contrast,
@@ -610,6 +617,7 @@ mod tests {
             playlist_open: true,
             resume_playback: false,
             auto_playlist: false,
+            restore_playlist: false,
             single_instance: false,
             brightness: 10,
             contrast: -5,

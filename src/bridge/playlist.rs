@@ -64,6 +64,15 @@ pub mod qobject {
         #[qinvokable]
         fn load(self: Pin<&mut Playlist>, url: &QString);
 
+        /// Enregistre la playlist (`$XDG_DATA_HOME/lumen/playlist.txt`) pour la retrouver
+        /// au prochain lancement.
+        #[qinvokable]
+        fn save(self: &Playlist);
+
+        /// Recharge la playlist enregistrée par `save()` (sans rien lire).
+        #[qinvokable]
+        fn restore(self: Pin<&mut Playlist>);
+
         /// Ajoute des fichiers en fin de playlist (sans doublon).
         #[qinvokable]
         fn add(self: Pin<&mut Playlist>, urls: &QStringList);
@@ -154,6 +163,38 @@ impl qobject::Playlist {
             }
         };
         self.as_mut().rust_mut().model.open(&key, rebuild);
+        self.as_mut().sync();
+    }
+
+    pub fn save(&self) {
+        let rust = self.rust();
+        let titles = rust.model.keys.iter().map(|k| rust.titles_cache.get(k).map_or("", String::as_str));
+        let text = serialize_playlist(&rust.model.keys, titles);
+        let path = playlist_path();
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        // Écriture atomique : pas de fichier tronqué si Lumen est tué pendant l'écriture
+        let tmp = path.with_extension("tmp");
+        if std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, &path)).is_err() {
+            eprintln!("Lumen : impossible d'enregistrer la playlist dans {}", path.display());
+        }
+    }
+
+    pub fn restore(mut self: Pin<&mut Self>) {
+        let Ok(text) = std::fs::read_to_string(playlist_path()) else { return };
+        let entries = parse_playlist(&text);
+        if entries.is_empty() {
+            return;
+        }
+        let mut keys = Vec::with_capacity(entries.len());
+        for (key, title) in entries {
+            if !title.is_empty() {
+                self.as_mut().rust_mut().titles_cache.insert(key.clone(), title);
+            }
+            keys.push(key);
+        }
+        self.as_mut().rust_mut().model.replace(keys);
         self.as_mut().sync();
     }
 
@@ -351,6 +392,42 @@ fn fetch_list(url: &str) -> Result<List, String> {
         std::fs::read(local_path(url)).map_err(|e| format!("Liste illisible ({e})"))?
     };
     iptv::parse(&String::from_utf8_lossy(&bytes), url).ok_or_else(|| "Cette liste ne contient aucune chaîne".to_string())
+}
+
+/// Fichier où la playlist est conservée entre deux lancements.
+fn playlist_path() -> PathBuf {
+    let data = std::env::var_os("XDG_DATA_HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
+        .unwrap_or_else(|| PathBuf::from("."));
+    data.join("lumen").join("playlist.txt")
+}
+
+/// Une ligne par élément : chemin (ou URL), puis, après une tabulation, le nom de la
+/// chaîne IPTV s'il y en a un. Les fichiers locaux disparus sont ignorés à la relecture.
+pub fn serialize_playlist<'a>(keys: &[String], titles: impl Iterator<Item = &'a str>) -> String {
+    let mut out = String::new();
+    for (key, title) in keys.iter().zip(titles) {
+        out.push_str(key);
+        if !title.is_empty() {
+            out.push('\t');
+            out.push_str(title);
+        }
+        out.push('\n');
+    }
+    out
+}
+
+pub fn parse_playlist(text: &str) -> Vec<(String, String)> {
+    text.lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| match l.split_once('\t') {
+            Some((key, title)) => (key.to_string(), title.to_string()),
+            None => (l.to_string(), String::new()),
+        })
+        .filter(|(key, _)| !key.starts_with('/') || Path::new(key).exists())
+        .collect()
 }
 
 fn item_url(key: &str) -> String {
@@ -826,6 +903,24 @@ mod tests {
         let mut last = items(&["a", "b"], "b");
         last.remove(1);
         assert_eq!((last.previous_index(), last.next_index()), (Some(0), None));
+    }
+
+    #[test]
+    fn playlist_file_round_trip() {
+        let dir = std::env::temp_dir().join(format!("lumen-playlist-roundtrip-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let present = dir.join("a.mkv");
+        std::fs::write(&present, b"").unwrap();
+        let keys = vec![
+            present.to_string_lossy().into_owned(),
+            dir.join("disparu.mkv").to_string_lossy().into_owned(),
+            "http://exemple.test/live/1.ts".to_string(),
+        ];
+        let text = serialize_playlist(&keys, ["", "", "Chaîne 1"].into_iter());
+        let parsed = parse_playlist(&text);
+        assert_eq!(parsed, vec![(keys[0].clone(), String::new()), (keys[2].clone(), "Chaîne 1".to_string())]);
+        assert!(parse_playlist("\n\n").is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

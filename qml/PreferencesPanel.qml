@@ -156,6 +156,8 @@ Rectangle {
               type: "button", button: "Effacer", action: () => { panel.history.clear(); a.osd("Historique de lecture effacé") } },
             { cat: "lecture", label: "Playlist automatique des épisodes", desc: "Ajoute les fichiers du même nom (épisodes, parties…)",
               type: "toggle", get: () => s.autoPlaylist, set: (v) => s.autoPlaylist = v },
+            { cat: "lecture", label: "Retrouver la playlist au démarrage", desc: "Rouvre la liste du lancement précédent (sans lancer la lecture)",
+              type: "toggle", get: () => s.restorePlaylist, set: (v) => s.restorePlaylist = v },
             { cat: "lecture", label: "Répétition", type: "choice",
               options: [{ label: "Désactivée", value: 0 }, { label: "Le fichier", value: 1 }, { label: "La playlist", value: 2 }],
               get: () => pl.repeatMode, set: (v) => pl.setRepeat(v) },
