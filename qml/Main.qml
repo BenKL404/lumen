@@ -718,6 +718,11 @@ Window {
         }
     }
 
+    // Nom affiché d'un élément de la playlist : nom de chaîne IPTV, sinon nom de fichier
+    function itemName(index) {
+        return (playlist.titles[index] || "") !== "" ? playlist.titles[index] : utils.fileName(playlist.items[index])
+    }
+
     // Fichier passé en ligne de commande après le premier : en playlist, sans l'ouvrir
     function enqueueUrl(url) {
         playlist.add([url.toString()])
@@ -1384,12 +1389,28 @@ Window {
         attached: root.playlistAttached
         onActivated: (index) => root.playAt(index)
         // « Ajouter » : des fichiers ou tout un dossier
+        onMenuRequested: (index, x, y) => {
+            trackMenu.visible = false
+            appMenu.close()
+            const url = playlist.items[index]
+            const isCurrent = index === playlist.current
+            contextMenu.entries = [
+                { label: "Lire", icon: "play", enabled: !isCurrent, action: () => root.playAt(index) },
+                { label: "Lire ensuite", icon: "skip-forward", enabled: !isCurrent && playlist.current >= 0 && index !== playlist.nextIndex,
+                  action: () => { playlist.playNext([url]); root.osd("À lire ensuite : " + root.itemName(index)) } },
+                { separator: true },
+                { label: "Retirer de la playlist", icon: "trash", action: () => playlist.remove(index) }
+            ]
+            const p = root.contentItem.mapToItem(contextMenu.parent, x, y)
+            contextMenu.popupAt(p.x, p.y)
+        }
         onAddRequested: (anchor) => {
             trackMenu.visible = false
             appMenu.close()
             contextMenu.entries = [
                 { label: "Des fichiers…", icon: "folder-open", action: () => addDialog.open() },
-                { label: "Un dossier…", icon: "folder", action: () => addFolderDialog.open() }
+                { label: "Un dossier…", icon: "folder", action: () => addFolderDialog.open() },
+                { label: "Des fichiers à lire ensuite…", icon: "skip-forward", enabled: playlist.current >= 0, action: () => playNextDialog.open() }
             ]
             contextMenu.popup(anchor, true)
         }
@@ -1675,6 +1696,18 @@ Window {
         onAccepted: playlist.addFolder(selectedFolder.toString())
     }
 
+    FileDialog {
+        id: playNextDialog
+        title: "À lire ensuite"
+        fileMode: FileDialog.OpenFiles
+        currentFolder: addDialog.currentFolder
+        nameFilters: fileDialog.nameFilters
+        onAccepted: {
+            playlist.playNext(selectedFiles.map(url => url.toString()))
+            root.osd(selectedFiles.length > 1 ? selectedFiles.length + " fichiers à lire ensuite"
+                                              : "À lire ensuite : " + utils.fileName(selectedFiles[0].toString()))
+        }
+    }
     FileDialog {
         id: addDialog
         title: "Ajouter à la playlist"

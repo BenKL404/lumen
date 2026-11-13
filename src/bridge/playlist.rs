@@ -77,6 +77,11 @@ pub mod qobject {
         #[qinvokable]
         fn add(self: Pin<&mut Playlist>, urls: &QStringList);
 
+        /// « Lire ensuite » : place ces fichiers juste après celui en cours (un fichier
+        /// déjà dans la playlist y est déplacé).
+        #[qinvokable]
+        fn play_next(self: Pin<&mut Playlist>, urls: &QStringList);
+
         /// Ajoute en fin de playlist les fichiers audio et vidéo d'un dossier.
         #[qinvokable]
         fn add_folder(self: Pin<&mut Playlist>, url: &QString);
@@ -239,6 +244,13 @@ impl qobject::Playlist {
         let keys: Vec<String> =
             QList::<QString>::from(urls).iter().map(|u| local_path(&u.to_string())).collect();
         self.as_mut().rust_mut().model.add(keys);
+        self.as_mut().sync();
+    }
+
+    pub fn play_next(mut self: Pin<&mut Self>, urls: &QStringList) {
+        let keys: Vec<String> =
+            QList::<QString>::from(urls).iter().map(|u| local_path(&u.to_string())).collect();
+        self.as_mut().rust_mut().model.play_next(keys);
         self.as_mut().sync();
     }
 
@@ -507,6 +519,39 @@ impl Items {
         if self.shuffle_order.is_some() {
             self.shuffle_vec(&mut added);
             self.shuffle_order.get_or_insert_with(Vec::new).extend(added);
+        }
+    }
+
+    /// Place `keys` juste après le fichier en cours, dans cet ordre, dans la liste comme
+    /// dans l'ordre de lecture aléatoire ; un fichier déjà présent est déplacé. Si le
+    /// fichier en cours a été retiré, ils prennent sa place ; sans fichier en cours, la tête.
+    pub fn play_next(&mut self, keys: Vec<String>) {
+        for key in keys.into_iter().rev() {
+            if self.current.as_deref() == Some(key.as_str()) {
+                continue;
+            }
+            if let Some(position) = self.keys.iter().position(|k| *k == key) {
+                self.keys.remove(position);
+                if self.shuffle_order.is_none() {
+                    if let Some(anchor) = self.anchor.as_mut().filter(|a| **a > position) {
+                        *anchor -= 1;
+                    }
+                }
+            }
+            let after_current = self.current_index().map(|i| i + 1);
+            let slot = after_current.or(self.anchor.filter(|_| self.shuffle_order.is_none())).unwrap_or(0);
+            self.keys.insert(slot.min(self.keys.len()), key.clone());
+            if let Some(order) = self.shuffle_order.as_mut() {
+                if let Some(position) = order.iter().position(|k| *k == key) {
+                    order.remove(position);
+                    if let Some(anchor) = self.anchor.as_mut().filter(|a| **a > position) {
+                        *anchor -= 1;
+                    }
+                }
+                let current = self.current.as_ref().and_then(|c| order.iter().position(|k| k == c));
+                let slot = current.map(|i| i + 1).or(self.anchor).unwrap_or(0);
+                order.insert(slot.min(order.len()), key);
+            }
         }
     }
 
@@ -903,6 +948,39 @@ mod tests {
         let mut last = items(&["a", "b"], "b");
         last.remove(1);
         assert_eq!((last.previous_index(), last.next_index()), (Some(0), None));
+    }
+
+    #[test]
+    fn play_next_inserts_after_current() {
+        let mut items = Items::default();
+        items.open("b", || vec!["a".into(), "b".into(), "c".into(), "d".into()]);
+        // Nouveau fichier, et fichier déjà présent (déplacé), dans l'ordre demandé
+        items.play_next(vec!["x".into(), "d".into()]);
+        assert_eq!(items.keys, ["a", "b", "x", "d", "c"]);
+        assert_eq!(items.next_index(), Some(2));
+        // Le fichier en cours lui-même est ignoré
+        items.play_next(vec!["b".into()]);
+        assert_eq!(items.keys, ["a", "b", "x", "d", "c"]);
+        // Fichier en cours retiré : le suivant prend sa place
+        items.remove(1);
+        items.play_next(vec!["y".into()]);
+        assert_eq!(items.keys, ["a", "y", "x", "d", "c"]);
+        assert_eq!(items.next_index(), Some(1));
+        // Playlist vide : en tête
+        let mut empty = Items::default();
+        empty.play_next(vec!["z".into()]);
+        assert_eq!(empty.keys, ["z"]);
+        assert_eq!(empty.next_index(), None);
+    }
+
+    #[test]
+    fn play_next_respects_shuffle_order() {
+        let mut items = Items::default().with_seed(7);
+        items.set_shuffle(true);
+        items.open("b", || vec!["a".into(), "b".into(), "c".into(), "d".into()]);
+        items.play_next(vec!["x".into()]);
+        assert_eq!(items.next_index(), items.keys.iter().position(|k| k == "x"));
+        assert_eq!(items.order().len(), 5);
     }
 
     #[test]

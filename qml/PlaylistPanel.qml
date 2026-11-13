@@ -24,6 +24,8 @@ Rectangle {
 
     signal activated(int index)
     signal addRequested(Item anchor)
+    // Clic droit sur une ligne (coordonnées de la scène)
+    signal menuRequested(int index, real x, real y)
     signal closeRequested()
 
     function matches(index) {
@@ -215,8 +217,17 @@ Rectangle {
 
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: dragging ? Qt.ClosedHandCursor : Qt.ArrowCursor
-                onPressed: (mouse) => { pressY = mouse.y; dragging = false }
+                onPressed: (mouse) => {
+                    pressY = mouse.y
+                    dragging = false
+                    if (mouse.button === Qt.RightButton) {
+                        panel.selected = row.index
+                        const p = mapToItem(null, mouse.x, mouse.y)
+                        panel.menuRequested(row.index, p.x, p.y)
+                    }
+                }
                 onPositionChanged: (mouse) => {
                     // Réorganiser : seulement sans recherche (des lignes seraient masquées)
                     if (!pressed || panel.filter !== "")
@@ -234,8 +245,8 @@ Rectangle {
                     dragging = false
                     panel.dropIndex = -1
                 }
-                onClicked: if (!dragging) panel.selected = row.index
-                onDoubleClicked: panel.activated(row.index)
+                onClicked: (mouse) => { if (!dragging && mouse.button === Qt.LeftButton) panel.selected = row.index }
+                onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) panel.activated(row.index) }
             }
         }
 
