@@ -16,6 +16,7 @@ Item {
     readonly property color contentColor: emphasized ? theme.onAccent : active ? theme.accent : theme.text
 
     signal clicked()
+    signal rightClicked()
 
     implicitWidth: icon !== "" ? 36 : Math.max(36, label.implicitWidth + 16)
     implicitHeight: 36
@@ -56,6 +57,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: button.clicked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: (mouse) => mouse.button === Qt.RightButton ? button.rightClicked() : button.clicked()
     }
 }

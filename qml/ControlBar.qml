@@ -48,6 +48,10 @@ Rectangle {
     signal subtitleMenuRequested()
     signal previousRequested()
     signal nextRequested()
+    // Molette sur la barre de progression (un saut court par cran)
+    signal seekStepRequested(int direction)
+    // Clic droit sur précédent/suivant : chapitre précédent/suivant
+    signal chapterStepRequested(int direction)
     signal playlistRequested()
     signal repeatRequested()
     signal shuffleRequested()
@@ -85,6 +89,7 @@ Rectangle {
                 to: bar.video.duration
                 enabled: bar.video.hasMedia
                 tooltipFormatter: (seconds) => bar.utils.formatClock(seconds)
+                onStepped: (direction) => bar.seekStepRequested(direction)
                 chapters: bar.video.chapters
                 // Miniatures par paliers (environ 200 par vidéo) : moins de calculs, cache efficace
                 previewSource: bar.realVideo && bar.mediaUrl !== ""
@@ -121,6 +126,7 @@ Rectangle {
                     live: true
                     opacity: bar.video.muted ? 0.4 : 1
                     onMoved: (v) => bar.video.volume = v
+                    onStepped: (direction) => bar.video.volume = Math.max(0, Math.min(130, bar.video.volume + direction * 5))
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
@@ -152,8 +158,8 @@ Rectangle {
                     onClicked: bar.video.hasMedia ? bar.video.togglePause() : bar.openRequested()
                 }
                 IconButton { theme: bar.theme; icon: "stop"; filled: true; iconSize: 16; visible: bar.compact < 3; enabled: bar.video.hasMedia; onClicked: bar.stopRequested() }
-                IconButton { theme: bar.theme; icon: "skip-back"; filled: true; enabled: bar.hasPrevious; onClicked: bar.previousRequested() }
-                IconButton { theme: bar.theme; icon: "skip-forward"; filled: true; enabled: bar.hasNext; onClicked: bar.nextRequested() }
+                IconButton { theme: bar.theme; icon: "skip-back"; filled: true; enabled: bar.hasPrevious || bar.video.chapters.length > 0; onClicked: bar.previousRequested(); onRightClicked: bar.chapterStepRequested(-1) }
+                IconButton { theme: bar.theme; icon: "skip-forward"; filled: true; enabled: bar.hasNext || bar.video.chapters.length > 0; onClicked: bar.nextRequested(); onRightClicked: bar.chapterStepRequested(1) }
                 // Ordre de lecture, à côté des boutons de lecture
                 IconButton { theme: bar.theme; icon: "shuffle"; visible: bar.compact < 1; active: bar.shuffle; onClicked: bar.shuffleRequested() }
                 IconButton {

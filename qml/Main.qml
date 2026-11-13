@@ -999,7 +999,14 @@ Window {
                 if (mouse.button === Qt.RightButton)
                     root.openContextMenu(stageArea, mouse.x, mouse.y)
             }
-            onWheel: (wheel) => root.changeVolume(wheel.angleDelta.y > 0 ? 5 : -5)
+            // Molette : volume ; avec Ctrl : vitesse fine (comme PotPlayer)
+            onWheel: (wheel) => {
+                const up = wheel.angleDelta.y > 0
+                if (wheel.modifiers & Qt.ControlModifier)
+                    root.setSpeed(Math.max(0.25, Math.min(4, Math.round((video.speed + (up ? 0.05 : -0.05)) * 100) / 100)))
+                else
+                    root.changeVolume(up ? 5 : -5)
+            }
 
             // Double-clic : lecture / pause ; triple-clic : plein écran ; simple clic : rien
             // (pas de pause par accident). On attend la fin de la série de clics pour savoir
@@ -1311,6 +1318,8 @@ Window {
         onAudioMenuRequested: root.toggleTrackMenu("audio")
         onSubtitleMenuRequested: root.toggleTrackMenu("sub")
         onPreviousRequested: root.playAt(playlist.previousIndex)
+        onSeekStepRequested: (direction) => root.seekBy(direction * settings.seekShort)
+        onChapterStepRequested: (direction) => video.chapters.length > 0 ? root.stepChapter(direction) : root.seekBy(direction * settings.seekLong)
         onNextRequested: root.playAt(playlist.nextIndex)
         onPlaylistRequested: root.togglePlaylist()
         repeatMode: playlist.repeatMode

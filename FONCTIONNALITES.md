@@ -96,7 +96,9 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 
 ### Contrôles
 - Double-clic sur la vidéo pour lecture / pause, triple-clic pour le plein écran (un simple clic ne fait rien, pour éviter les pauses par accident).
-- Molette de la souris pour régler le volume.
+- Molette de la souris pour régler le volume ; avec Ctrl, la vitesse (pas de 0,05).
+- Molette sur la barre de progression : saut court en avant ou en arrière ; sur le curseur de volume : ±5 %.
+- Clic droit sur les boutons précédent/suivant : chapitre précédent/suivant (sans chapitres, saut long).
 - Barre de progression cliquable, avec l'heure et une miniature au survol.
 - Sauts courts et longs au clavier (5 s et 30 s par défaut, réglables dans les préférences).
 - Vitesse, capture d'écran et plein écran au clavier, dans les menus et dans les préférences (vitesse).

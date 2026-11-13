@@ -23,6 +23,8 @@ Item {
     property var previewSource: null
 
     signal moved(real value)
+    // Molette sur le curseur : un cran en avant ou en arrière
+    signal stepped(int direction)
 
     readonly property real shownValue: area.pressed ? dragValue : value
     property real dragValue: 0
@@ -196,6 +198,7 @@ Item {
         anchors.bottomMargin: -6
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onWheel: (wheel) => slider.stepped(wheel.angleDelta.y > 0 ? 1 : -1)
 
         onPressed: (mouse) => {
             slider.dragValue = slider.valueAt(mouse.x)
