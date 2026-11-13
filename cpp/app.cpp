@@ -47,6 +47,15 @@ void lumen_open_file(const QQmlApplicationEngine &engine, const QString &path)
     QMetaObject::invokeMethod(window, "openUrl", Q_ARG(QVariant, QVariant(url)), Q_ARG(QVariant, QVariant(false)));
 }
 
+void lumen_enqueue_file(const QQmlApplicationEngine &engine, const QString &path)
+{
+    QQuickWindow *window = rootWindow(engine);
+    if (!window)
+        return;
+    const QUrl url = QUrl::fromUserInput(path, QDir::currentPath(), QUrl::AssumeLocalFile);
+    QMetaObject::invokeMethod(window, "enqueueUrl", Q_ARG(QVariant, QVariant(url)));
+}
+
 void lumen_snapshot(const QQmlApplicationEngine &engine, const QString &path, int delayMs)
 {
     QQuickWindow *window = rootWindow(engine);

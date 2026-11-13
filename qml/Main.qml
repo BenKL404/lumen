@@ -696,6 +696,23 @@ Window {
         video.stop()
     }
 
+    // Plusieurs fichiers choisis (dialogue ou glisser-déposer) : lire le premier,
+    // ajouter les autres à la suite de la playlist
+    function openFiles(urls) {
+        if (urls.length === 0)
+            return
+        openUrl(urls[0])
+        if (urls.length > 1) {
+            playlist.add(urls.slice(1).map(u => u.toString()))
+            osd(urls.length + " fichiers ajoutés à la playlist")
+        }
+    }
+
+    // Fichier passé en ligne de commande après le premier : en playlist, sans l'ouvrir
+    function enqueueUrl(url) {
+        playlist.add([url.toString()])
+    }
+
     function playAt(index) {
         if (index >= 0 && index < playlist.items.length && index !== playlist.current)
             openUrl(playlist.items[index], true)
@@ -814,7 +831,8 @@ Window {
             requestActivate()
             break
         case "quit": close(); break
-        case "open": openUrl(text); break
+        // Plusieurs fichiers transmis par une autre instance : séparés par des sauts de ligne
+        case "open": openFiles(text.split("\n")); break
         }
         Qt.callLater(publishState)
     }
@@ -1269,7 +1287,7 @@ Window {
                 if (video.hasMedia && utils.isSubtitle(url.toString()))
                     root.addSubtitle(url)
                 else
-                    root.openUrl(url)
+                    root.openFiles(drop.urls)
             }
         }
     }
@@ -1601,14 +1619,15 @@ Window {
     // ------------------------------------------------------- Dialogues
     FileDialog {
         id: fileDialog
-        title: "Ouvrir une vidéo"
+        title: "Ouvrir des vidéos"
+        fileMode: FileDialog.OpenFiles
         nameFilters: [
             "Vidéos (*.mkv *.mp4 *.avi *.webm *.mov *.wmv *.flv *.ts *.m2ts *.mpg *.ogv)",
             "Audio (*.mp3 *.flac *.ogg *.opus *.wav *.m4a *.aac)",
             "Listes de chaînes IPTV (*.m3u *.m3u8)",
             "Tous les fichiers (*)"
         ]
-        onAccepted: root.openUrl(selectedFile)
+        onAccepted: root.openFiles(selectedFiles)
     }
 
     FolderDialog {

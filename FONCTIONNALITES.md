@@ -89,10 +89,10 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 - Reste sur la dernière image à la fin de la vidéo au lieu de fermer le fichier.
 
 ### Ouverture de fichiers
-- Touche **O** (fichier) ou **Ctrl+O** (dossier entier en playlist), menu Lumen ou clic droit.
+- Touche **O** (un ou plusieurs fichiers : le premier se lit, les autres rejoignent la playlist) ou **Ctrl+O** (dossier entier en playlist), menu Lumen ou clic droit.
 - Le bouton lecture ouvre le sélecteur de fichiers quand aucune vidéo n'est chargée.
-- Glisser-déposer d'une vidéo, d'un dossier, d'un lien ou d'une liste `.m3u` directement dans la fenêtre.
-- « Ouvrir avec Lumen » depuis le gestionnaire de fichiers, ou `lumen fichier|dossier|lien` dans un terminal.
+- Glisser-déposer d'une ou plusieurs vidéos, d'un dossier, d'un lien ou d'une liste `.m3u` directement dans la fenêtre.
+- « Ouvrir avec Lumen » depuis le gestionnaire de fichiers, ou `lumen fichier…|dossier|lien` dans un terminal — plusieurs fichiers acceptés, aussi avec « Ouvrir avec » sur une sélection.
 
 ### Contrôles
 - Double-clic sur la vidéo pour lecture / pause, triple-clic pour le plein écran (un simple clic ne fait rien, pour éviter les pauses par accident).

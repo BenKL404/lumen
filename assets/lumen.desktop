@@ -7,7 +7,7 @@ Comment=Lecteur vidéo moderne et rapide, à l’interface épurée
 Comment[en]=Fast, modern video player with a clean interface
 Icon=lumen
 # Remplacé par le chemin complet à l'installation (scripts/install.sh)
-Exec=lumen %f
+Exec=lumen %F
 TryExec=lumen
 Terminal=false
 StartupNotify=true

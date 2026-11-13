@@ -1,6 +1,8 @@
-//! Une seule fenêtre Lumen : si Lumen tourne déjà, le fichier demandé lui est transmis
+//! Une seule fenêtre Lumen : si Lumen tourne déjà, les fichiers demandés lui sont transmis
 //! (méthodes MPRIS `OpenUri` et `Raise`, déjà publiées par chaque instance) et ce
-//! nouveau processus s'arrête sans ouvrir de fenêtre.
+//! nouveau processus s'arrête sans ouvrir de fenêtre. Plusieurs fichiers partent en un seul
+//! `OpenUri`, séparés par des sauts de ligne (interdits dans une URI) : le premier se lit,
+//! les autres rejoignent la playlist (voir `openFiles` dans Main.qml).
 
 use std::path::Path;
 use std::time::Duration;
@@ -14,12 +16,12 @@ use crate::bridge::settings::{settings_path, SettingsFile};
 const SERVICE: &str = "org.mpris.MediaPlayer2.lumen";
 const PATH: &str = "/org/mpris/MediaPlayer2";
 
-/// Vrai si une instance déjà lancée a pris en charge `argument` : il faut alors s'arrêter.
-pub fn forward_to_running_instance(argument: Option<&str>) -> bool {
+/// Vrai si une instance déjà lancée a pris en charge `arguments` : il faut alors s'arrêter.
+pub fn forward_to_running_instance(arguments: &[String]) -> bool {
     if !SettingsFile::load(&settings_path()).single_instance {
         return false;
     }
-    match forward(argument) {
+    match forward(arguments) {
         Ok(forwarded) => forwarded,
         Err(e) => {
             // En cas de doute, ouvrir une nouvelle fenêtre plutôt que rien
@@ -29,15 +31,16 @@ pub fn forward_to_running_instance(argument: Option<&str>) -> bool {
     }
 }
 
-fn forward(argument: Option<&str>) -> zbus::Result<bool> {
+fn forward(arguments: &[String]) -> zbus::Result<bool> {
     // Délai court : une instance bloquée ne doit pas retarder l'ouverture
     let conn: Connection = connection::Builder::session()?.method_timeout(Duration::from_secs(3)).build()?;
     let running = DBusProxy::new(&conn)?.name_has_owner(BusName::try_from(SERVICE)?.into())?;
     if !running {
         return Ok(false);
     }
-    if let Some(uri) = argument.map(to_uri) {
-        conn.call_method(Some(SERVICE), PATH, Some("org.mpris.MediaPlayer2.Player"), "OpenUri", &(uri,))?;
+    if !arguments.is_empty() {
+        let uris = arguments.iter().map(|a| to_uri(a)).collect::<Vec<_>>().join("\n");
+        conn.call_method(Some(SERVICE), PATH, Some("org.mpris.MediaPlayer2.Player"), "OpenUri", &(uris,))?;
     }
     conn.call_method(Some(SERVICE), PATH, Some("org.mpris.MediaPlayer2"), "Raise", &())?;
     Ok(true)

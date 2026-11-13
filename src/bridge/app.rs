@@ -28,6 +28,9 @@ pub mod ffi {
         /// Ouvre un fichier via `openUrl()` de Main.qml.
         fn lumen_open_file(engine: &QQmlApplicationEngine, path: &QString);
 
+        /// Ajoute un fichier à la playlist, sans l'ouvrir (fichiers suivants de `lumen a b c…`).
+        fn lumen_enqueue_file(engine: &QQmlApplicationEngine, path: &QString);
+
         /// Enregistre une image de la fenêtre après `delay_ms`, puis quitte.
         fn lumen_snapshot(engine: &QQmlApplicationEngine, path: &QString, delay_ms: i32);
     }

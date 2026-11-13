@@ -6,9 +6,9 @@ mod single_instance;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 
 fn main() {
-    // Lumen déjà ouvert : lui confier le fichier et s'arrêter (option single_instance)
-    let argument = std::env::args().nth(1);
-    if single_instance::forward_to_running_instance(argument.as_deref()) {
+    // Lumen déjà ouvert : lui confier les fichiers et s'arrêter (option single_instance)
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    if single_instance::forward_to_running_instance(&arguments) {
         return;
     }
 
@@ -40,9 +40,12 @@ fn main() {
     }
 
     if let Some(engine) = engine.as_ref() {
-        // `lumen fichier.mkv` : ouvre le fichier au démarrage
-        if let Some(file) = &argument {
+        // `lumen fichier.mkv [autres…]` : ouvre le premier, ajoute les autres à la playlist
+        if let Some(file) = arguments.first() {
             bridge::app::ffi::lumen_open_file(engine, &QString::from(file));
+        }
+        for file in arguments.iter().skip(1) {
+            bridge::app::ffi::lumen_enqueue_file(engine, &QString::from(file));
         }
         // Outil de développement : LUMEN_SNAPSHOT=capture.png enregistre la fenêtre puis quitte
         if let Some(path) = std::env::var_os("LUMEN_SNAPSHOT") {
