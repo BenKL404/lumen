@@ -173,6 +173,8 @@ Rectangle {
             { cat: "lecture", label: "Saut long", desc: "Ctrl + flèches", type: "slider", min: 5, max: 300, unit: " s",
               get: () => s.seekLong, set: (v) => s.seekLong = v },
 
+            { cat: "video", label: "Réglages d'image par vidéo", desc: "Chaque vidéo retrouve ses réglages (luminosité, zoom, format, rotation…)",
+              type: "toggle", get: () => s.imagePerVideo, set: (v) => s.imagePerVideo = v },
             { cat: "video", label: "Décodage matériel", desc: "Moins de processeur et de batterie (VA-API, NVDEC…)",
               type: "toggle", get: () => s.hardwareDecoding, set: (v) => s.hardwareDecoding = v },
             { cat: "video", label: "Adapter la fenêtre à la vidéo", desc: "À l'ouverture d'un fichier : proportions de l'image, sans bandes noires",

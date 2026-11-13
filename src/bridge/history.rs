@@ -70,6 +70,17 @@ pub mod qobject {
         /// Retire tous les signets de la vidéo.
         #[qinvokable]
         fn clear_bookmarks(self: &History, url: &QString);
+
+        /// Réglages d'image propres à la vidéo (objet JSON écrit par `remember_image`),
+        /// chaîne vide si elle n'en a pas.
+        #[qinvokable]
+        fn image_settings(self: &History, url: &QString) -> QString;
+
+        #[qinvokable]
+        fn remember_image(self: &History, url: &QString, json: &QString);
+
+        #[qinvokable]
+        fn forget_image(self: &History, url: &QString);
     }
 }
 
@@ -213,6 +224,27 @@ impl qobject::History {
         self.with_store("suppression des signets", |store| store.clear_bookmarks(&local_path(&url.to_string())));
     }
 
+    pub fn image_settings(&self, url: &QString) -> QString {
+        let json = self
+            .rust()
+            .store
+            .as_ref()
+            .and_then(|store| store.image_settings(&local_path(&url.to_string())).ok().flatten());
+        QString::from(json.as_deref().unwrap_or(""))
+    }
+
+    pub fn remember_image(&self, url: &QString, json: &QString) {
+        self.with_store("l'enregistrement des réglages d'image", |store| {
+            store.set_image_settings(&local_path(&url.to_string()), &json.to_string())
+        });
+    }
+
+    pub fn forget_image(&self, url: &QString) {
+        self.with_store("la suppression des réglages d'image", |store| {
+            store.clear_image_settings(&local_path(&url.to_string()))
+        });
+    }
+
     fn with_store(&self, what: &str, f: impl FnOnce(&HistoryStore) -> rusqlite::Result<()>) {
         if let Some(store) = &self.rust().store {
             if let Err(e) = f(store) {
@@ -331,6 +363,17 @@ impl HistoryStore {
                  COMMIT;",
             )?;
         }
+        if version < 3 {
+            conn.execute_batch(
+                "BEGIN;
+                 CREATE TABLE IF NOT EXISTS image_settings (
+                    key      TEXT PRIMARY KEY,
+                    settings TEXT NOT NULL
+                 );
+                 PRAGMA user_version = 3;
+                 COMMIT;",
+            )?;
+        }
         Ok(Self { conn })
     }
 
@@ -418,6 +461,26 @@ impl HistoryStore {
         Ok(())
     }
 
+    pub fn image_settings(&self, key: &str) -> rusqlite::Result<Option<String>> {
+        self.conn
+            .query_row("SELECT settings FROM image_settings WHERE key = ?1", params![key], |row| row.get(0))
+            .optional()
+    }
+
+    pub fn set_image_settings(&self, key: &str, json: &str) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "INSERT INTO image_settings (key, settings) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET settings = excluded.settings",
+            params![key, json],
+        )?;
+        Ok(())
+    }
+
+    pub fn clear_image_settings(&self, key: &str) -> rusqlite::Result<()> {
+        self.conn.execute("DELETE FROM image_settings WHERE key = ?1", params![key])?;
+        Ok(())
+    }
+
     /// Dernières vidéos (chemin, position), de la plus récente à la plus ancienne
     pub fn recent(&self, limit: usize) -> rusqlite::Result<Vec<(String, f64)>> {
         let mut stmt = self.conn.prepare(
@@ -445,6 +508,17 @@ mod tests {
         assert_eq!(decide(50.0, 90.0), Decision::Ignore); // vidéo trop courte
         assert_eq!(decide(50.0, 0.0), Decision::Ignore); // durée encore inconnue
         assert_eq!(decide(f64::NAN, 3600.0), Decision::Ignore);
+    }
+
+    #[test]
+    fn stores_image_settings_per_video() {
+        let store = HistoryStore::open_in_memory().unwrap();
+        assert_eq!(store.image_settings("a").unwrap(), None);
+        store.set_image_settings("a", "{\"brightness\":10}").unwrap();
+        store.set_image_settings("a", "{\"brightness\":20}").unwrap();
+        assert_eq!(store.image_settings("a").unwrap().as_deref(), Some("{\"brightness\":20}"));
+        store.clear_image_settings("a").unwrap();
+        assert_eq!(store.image_settings("a").unwrap(), None);
     }
 
     #[test]

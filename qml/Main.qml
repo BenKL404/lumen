@@ -198,7 +198,7 @@ Window {
         })
         const aspectEntry = (label, value) => ({
             label: label, checked: root.aspect === value,
-            action: () => { root.aspect = value; video.command(["set", "video-aspect-override", value]); root.osd("Format d'image : " + label) }
+            action: () => { root.aspect = value; video.command(["set", "video-aspect-override", value]); root.osd("Format d'image : " + label); root.imageTouched() }
         })
 
         return [
@@ -319,18 +319,65 @@ Window {
         // Netteté (shader AMD CAS, sur la carte graphique) : 0 = désactivée
         property int sharpness: 0
 
-        onBrightnessChanged: video.command(["set", "brightness", String(brightness)])
-        onContrastChanged: video.command(["set", "contrast", String(contrast)])
-        onSaturationChanged: video.command(["set", "saturation", String(saturation)])
-        onGammaChanged: video.command(["set", "gamma", String(gamma)])
-        onHueChanged: video.command(["set", "hue", String(hue)])
+        onBrightnessChanged: { video.command(["set", "brightness", String(brightness)]); root.imageTouched() }
+        onContrastChanged: { video.command(["set", "contrast", String(contrast)]); root.imageTouched() }
+        onSaturationChanged: { video.command(["set", "saturation", String(saturation)]); root.imageTouched() }
+        onGammaChanged: { video.command(["set", "gamma", String(gamma)]); root.imageTouched() }
+        onHueChanged: { video.command(["set", "hue", String(hue)]); root.imageTouched() }
         // mpv attend un zoom logarithmique : 0 = taille normale, 1 = ×2
-        onZoomChanged: video.command(["set", "video-zoom", String(Math.log2(zoom / 100))])
+        onZoomChanged: { video.command(["set", "video-zoom", String(Math.log2(zoom / 100))]); root.imageTouched() }
         // Regroupé : un curseur qu'on fait glisser ne recharge les shaders qu'une fois par image
-        onSharpnessChanged: Qt.callLater(root.applyShaders)
+        onSharpnessChanged: { Qt.callLater(root.applyShaders); root.imageTouched() }
     }
 
     readonly property var imageKeys: ["brightness", "contrast", "saturation", "gamma", "hue", "zoom", "sharpness"]
+
+    // Réglages d'image par vidéo (setting image_per_video) : enregistrés dans l'historique
+    // dès que l'utilisateur en change un pendant la lecture, réappliqués à l'ouverture ;
+    // une vidéo sans réglages propres garde ceux en cours
+    property bool applyingImage: false
+    function imageTouched() {
+        if (!applyingImage && settings.imagePerVideo && currentUrl !== "")
+            imageSaveTimer.restart()
+    }
+    Timer {
+        id: imageSaveTimer
+        interval: 400
+        onTriggered: {
+            if (root.currentUrl === "")
+                return
+            const values = { aspect: root.aspect, rotation: root.rotation }
+            root.imageKeys.forEach(k => values[k] = root.image[k])
+            history.rememberImage(root.currentUrl, JSON.stringify(values))
+        }
+    }
+    // Enregistrement en attente : à faire avant de changer de fichier
+    function flushImageSave() {
+        if (imageSaveTimer.running) {
+            imageSaveTimer.stop()
+            imageSaveTimer.triggered()
+        }
+    }
+    function loadImageSettings() {
+        if (!settings.imagePerVideo || currentUrl === "")
+            return
+        const json = history.imageSettings(currentUrl)
+        if (json === "")
+            return
+        let values
+        try { values = JSON.parse(json) } catch (e) { return }
+        applyingImage = true
+        imageKeys.forEach(k => { if (typeof values[k] === "number") image[k] = values[k] })
+        if (typeof values.aspect === "string" && values.aspect !== aspect) {
+            aspect = values.aspect
+            video.command(["set", "video-aspect-override", aspect])
+        }
+        if (typeof values.rotation === "number" && values.rotation !== rotation) {
+            rotation = values.rotation
+            video.command(["set", "video-rotate", String(rotation)])
+        }
+        applyingImage = false
+    }
 
     // Filtres d'image (shaders.rs) : netteté et agrandissement
     function applyShaders() {
@@ -510,6 +557,7 @@ Window {
         rotation = (rotation + 90) % 360
         video.command(["set", "video-rotate", String(rotation)])
         osd("Rotation " + rotation + "°")
+        imageTouched()
     }
 
     function wake() {
@@ -738,6 +786,7 @@ Window {
     }
 
     function saveProgress() {
+        flushImageSave()
         if (currentUrl === "" || !settings.resumePlayback)
             return
         const audio = selectedTrack("audio")
@@ -975,6 +1024,7 @@ Window {
                 // mpv a enchaîné de lui-même sur le fichier préchargé : même suite qu'openUrl()
                 if (root.prefetchedUrl !== "" && root.pendingUrl !== root.prefetchedUrl
                         && video.getProperty("path") === utils.localPath(root.prefetchedUrl)) {
+                    root.flushImageSave()
                     if (root.currentUrl !== "")
                         history.forget(root.currentUrl) // vu jusqu'au bout
                     root.currentUrl = ""
@@ -996,6 +1046,7 @@ Window {
                     video.command(["set", "ab-loop-b", "no"])
                 }
                 root.resume()
+                root.loadImageSettings()
                 root.syncPrefetch()
             }
         }
