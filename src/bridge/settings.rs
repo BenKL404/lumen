@@ -46,6 +46,7 @@ pub mod qobject {
         #[qproperty(bool, show_osd)]
         #[qproperty(i32, seek_short)]
         #[qproperty(i32, seek_long)]
+        #[qproperty(i32, seek_very_long)]
         #[qproperty(bool, hardware_decoding)]
         #[qproperty(bool, fit_window_to_video)]
         #[qproperty(QString, audio_languages)]
@@ -175,6 +176,8 @@ pub struct SettingsFile {
     /// Durée des sauts, en secondes : flèches, et Ctrl+flèches
     pub seek_short: i32,
     pub seek_long: i32,
+    /// Saut très long (Maj + flèches), en secondes
+    pub seek_very_long: i32,
     /// Décodage matériel (VA-API, NVDEC…) : moins de processeur et de batterie
     pub hardware_decoding: bool,
     /// Adapter la fenêtre aux proportions de la vidéo à l'ouverture d'un fichier
@@ -238,6 +241,7 @@ impl Default for SettingsFile {
             show_osd: true,
             seek_short: 5,
             seek_long: 30,
+            seek_very_long: 300,
             hardware_decoding: true,
             fit_window_to_video: true,
             audio_languages: String::new(),
@@ -277,6 +281,7 @@ impl SettingsFile {
         self.equalizer = super::audio::sanitized(&self.equalizer);
         self.seek_short = self.seek_short.clamp(1, 60);
         self.seek_long = self.seek_long.clamp(5, 600);
+        self.seek_very_long = self.seek_very_long.clamp(30, 3600);
         self.subtitle_scale = self.subtitle_scale.clamp(50, 300);
         self.sharpness = self.sharpness.clamp(0, 100);
         self.opensubtitles_api_key = self.opensubtitles_api_key.trim().to_string();
@@ -370,6 +375,7 @@ pub struct SettingsRust {
     show_osd: bool,
     seek_short: i32,
     seek_long: i32,
+    seek_very_long: i32,
     hardware_decoding: bool,
     fit_window_to_video: bool,
     audio_languages: QString,
@@ -425,6 +431,7 @@ impl From<SettingsFile> for SettingsRust {
             show_osd: f.show_osd,
             seek_short: f.seek_short,
             seek_long: f.seek_long,
+            seek_very_long: f.seek_very_long,
             hardware_decoding: f.hardware_decoding,
             fit_window_to_video: f.fit_window_to_video,
             audio_languages: QString::from(&f.audio_languages),
@@ -482,6 +489,7 @@ impl From<&SettingsRust> for SettingsFile {
             show_osd: s.show_osd,
             seek_short: s.seek_short,
             seek_long: s.seek_long,
+            seek_very_long: s.seek_very_long,
             hardware_decoding: s.hardware_decoding,
             fit_window_to_video: s.fit_window_to_video,
             audio_languages: s.audio_languages.to_string(),
@@ -646,6 +654,7 @@ mod tests {
             show_osd: false,
             seek_short: 10,
             seek_long: 60,
+            seek_very_long: 600,
             hardware_decoding: false,
             fit_window_to_video: false,
             audio_languages: "fr,en".into(),

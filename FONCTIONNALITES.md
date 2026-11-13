@@ -120,6 +120,7 @@ La couleur d'accent est personnalisable, et des thèmes clair et OLED existent (
 | Espace | Lecture / pause |
 | ← / → | Reculer / avancer (saut court, 5 s par défaut) |
 | Ctrl + ← / → | Reculer / avancer (saut long, 30 s par défaut) |
+| Maj + ← / → | Reculer / avancer (saut très long, 5 min par défaut) |
 | ↑ / ↓ | Volume ±5 % |
 | M | Muet |
 | F ou Entrée | Plein écran |

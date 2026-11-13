@@ -17,6 +17,8 @@ pub const DEFAULTS: &[(&str, &str, &[&str])] = &[
     ("avancer", "Avancer (saut court)", &["Right"]),
     ("reculer_30s", "Reculer (saut long)", &["Ctrl+Left"]),
     ("avancer_30s", "Avancer (saut long)", &["Ctrl+Right"]),
+    ("reculer_5min", "Reculer (saut très long)", &["Shift+Left"]),
+    ("avancer_5min", "Avancer (saut très long)", &["Shift+Right"]),
     ("volume_plus", "Augmenter le volume", &["Up"]),
     ("volume_moins", "Baisser le volume", &["Down"]),
     ("muet", "Muet", &["M"]),

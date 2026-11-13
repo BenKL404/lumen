@@ -222,10 +222,12 @@ Window {
                 { label: "Répéter le fichier", checked: playlist.repeatMode === 1, action: () => root.setRepeat(1) },
                 { label: "Répéter la playlist", checked: playlist.repeatMode === 2, action: () => root.setRepeat(2) },
                 { separator: true },
-                { label: "Reculer de " + settings.seekShort + " s", shortcut: root.keyLabel("reculer"), action: () => root.seekBy(-settings.seekShort) },
-                { label: "Avancer de " + settings.seekShort + " s", shortcut: root.keyLabel("avancer"), action: () => root.seekBy(settings.seekShort) },
-                { label: "Reculer de " + settings.seekLong + " s", shortcut: root.keyLabel("reculer_30s"), action: () => root.seekBy(-settings.seekLong) },
-                { label: "Avancer de " + settings.seekLong + " s", shortcut: root.keyLabel("avancer_30s"), action: () => root.seekBy(settings.seekLong) },
+                { label: "Reculer de " + root.seekLabel(settings.seekShort), shortcut: root.keyLabel("reculer"), action: () => root.seekBy(-settings.seekShort) },
+                { label: "Avancer de " + root.seekLabel(settings.seekShort), shortcut: root.keyLabel("avancer"), action: () => root.seekBy(settings.seekShort) },
+                { label: "Reculer de " + root.seekLabel(settings.seekLong), shortcut: root.keyLabel("reculer_30s"), action: () => root.seekBy(-settings.seekLong) },
+                { label: "Avancer de " + root.seekLabel(settings.seekLong), shortcut: root.keyLabel("avancer_30s"), action: () => root.seekBy(settings.seekLong) },
+                { label: "Reculer de " + root.seekLabel(settings.seekVeryLong), shortcut: root.keyLabel("reculer_5min"), action: () => root.seekBy(-settings.seekVeryLong) },
+                { label: "Avancer de " + root.seekLabel(settings.seekVeryLong), shortcut: root.keyLabel("avancer_5min"), action: () => root.seekBy(settings.seekVeryLong) },
                 { label: "Image précédente", shortcut: root.keyLabel("image_precedente"), action: () => video.frameStep(false) },
                 { label: "Image suivante", shortcut: root.keyLabel("image_suivante"), action: () => video.frameStep(true) }
             ] },
@@ -532,9 +534,17 @@ Window {
         setPlaylistOpen(true)
     }
 
+    // « 5 s », « 1 min 30 s », « 5 min »
+    function seekLabel(seconds) {
+        seconds = Math.abs(seconds)
+        if (seconds < 60)
+            return seconds + " s"
+        return Math.floor(seconds / 60) + " min" + (seconds % 60 ? " " + seconds % 60 + " s" : "")
+    }
+
     function seekBy(seconds) {
         video.seekRelative(seconds)
-        osd((seconds > 0 ? "+" : "−") + Math.abs(seconds) + " s")
+        osd((seconds > 0 ? "+" : "−") + seekLabel(seconds))
     }
 
     function changeVolume(step) {
@@ -1789,6 +1799,8 @@ Window {
         "avancer": () => seekBy(settings.seekShort),
         "reculer_30s": () => seekBy(-settings.seekLong),
         "avancer_30s": () => seekBy(settings.seekLong),
+        "reculer_5min": () => seekBy(-settings.seekVeryLong),
+        "avancer_5min": () => seekBy(settings.seekVeryLong),
         "volume_plus": () => changeVolume(5),
         "volume_moins": () => changeVolume(-5),
         "muet": () => toggleMute(),

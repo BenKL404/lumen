@@ -379,6 +379,7 @@ personnalisables »). Liste détaillée dans [FONCTIONNALITES.md](FONCTIONNALITE
 | Espace            | Lecture / pause               |
 | ← / →             | Saut court                    |
 | Ctrl + ← / →      | Saut long                     |
+| Maj + ← / →       | Saut très long                |
 | ↑ / ↓             | Volume ±5 %                   |
 | F ou Entrée       | Plein écran                   |
 | O / Ctrl+O        | Ouvrir un fichier / un dossier|

@@ -172,6 +172,8 @@ Rectangle {
               get: () => s.seekShort, set: (v) => s.seekShort = v },
             { cat: "lecture", label: "Saut long", desc: "Ctrl + flèches", type: "slider", min: 5, max: 300, unit: " s",
               get: () => s.seekLong, set: (v) => s.seekLong = v },
+            { cat: "lecture", label: "Saut très long", desc: "Maj + flèches", type: "slider", min: 30, max: 1800, step: 30, unit: " s",
+              get: () => s.seekVeryLong, set: (v) => s.seekVeryLong = v },
 
             { cat: "video", label: "Réglages d'image par vidéo", desc: "Chaque vidéo retrouve ses réglages (luminosité, zoom, format, rotation…)",
               type: "toggle", get: () => s.imagePerVideo, set: (v) => s.imagePerVideo = v },
