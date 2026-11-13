@@ -29,6 +29,7 @@ pub mod qobject {
         #[qproperty(bool, resume_playback)]
         #[qproperty(bool, auto_playlist)]
         #[qproperty(bool, restore_playlist)]
+        #[qproperty(bool, gapless_playback)]
         #[qproperty(bool, single_instance)]
         // Réglages d'image : -100…100, zoom en % (25…400)
         #[qproperty(i32, brightness)]
@@ -150,6 +151,8 @@ pub struct SettingsFile {
     pub auto_playlist: bool,
     /// Retrouver la playlist du lancement précédent au démarrage
     pub restore_playlist: bool,
+    /// Précharger le fichier suivant de la playlist pour enchaîner sans coupure
+    pub gapless_playback: bool,
     /// Ouvrir les fichiers dans la fenêtre Lumen déjà ouverte plutôt qu'une nouvelle
     pub single_instance: bool,
     /// Réglages d'image, de -100 à 100 (0 : neutre)
@@ -218,6 +221,7 @@ impl Default for SettingsFile {
             resume_playback: true,
             auto_playlist: true,
             restore_playlist: true,
+            gapless_playback: true,
             single_instance: true,
             brightness: 0,
             contrast: 0,
@@ -348,6 +352,7 @@ pub struct SettingsRust {
     resume_playback: bool,
     auto_playlist: bool,
     restore_playlist: bool,
+    gapless_playback: bool,
     single_instance: bool,
     brightness: i32,
     contrast: i32,
@@ -395,6 +400,7 @@ impl From<SettingsFile> for SettingsRust {
             resume_playback: f.resume_playback,
             auto_playlist: f.auto_playlist,
             restore_playlist: f.restore_playlist,
+            gapless_playback: f.gapless_playback,
             single_instance: f.single_instance,
             brightness: f.brightness,
             contrast: f.contrast,
@@ -456,6 +462,7 @@ impl From<&SettingsRust> for SettingsFile {
             resume_playback: s.resume_playback,
             auto_playlist: s.auto_playlist,
             restore_playlist: s.restore_playlist,
+            gapless_playback: s.gapless_playback,
             single_instance: s.single_instance,
             brightness: s.brightness,
             contrast: s.contrast,
@@ -618,6 +625,7 @@ mod tests {
             resume_playback: false,
             auto_playlist: false,
             restore_playlist: false,
+            gapless_playback: false,
             single_instance: false,
             brightness: 10,
             contrast: -5,

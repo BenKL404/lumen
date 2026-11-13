@@ -158,6 +158,8 @@ Rectangle {
               type: "toggle", get: () => s.autoPlaylist, set: (v) => s.autoPlaylist = v },
             { cat: "lecture", label: "Retrouver la playlist au démarrage", desc: "Rouvre la liste du lancement précédent (sans lancer la lecture)",
               type: "toggle", get: () => s.restorePlaylist, set: (v) => s.restorePlaylist = v },
+            { cat: "lecture", label: "Enchaînement sans coupure", desc: "Précharge le fichier suivant de la playlist (fichiers locaux)",
+              type: "toggle", get: () => s.gaplessPlayback, set: (v) => s.gaplessPlayback = v },
             { cat: "lecture", label: "Répétition", type: "choice",
               options: [{ label: "Désactivée", value: 0 }, { label: "Le fichier", value: 1 }, { label: "La playlist", value: 2 }],
               get: () => pl.repeatMode, set: (v) => pl.setRepeat(v) },

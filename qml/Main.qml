@@ -661,6 +661,7 @@ Window {
         saveProgress()
         currentUrl = ""
         pendingUrl = url.toString()
+        prefetchedUrl = "" // loadfile vide la playlist interne de mpv
         playlist.load(pendingUrl)
         resumeBox.hide()
         video.loadFile(url)
@@ -699,6 +700,7 @@ Window {
         saveProgress()
         currentUrl = ""
         pendingUrl = ""
+        prefetchedUrl = ""
         bookmarks = []
         resumeBox.hide()
         video.stop()
@@ -866,8 +868,9 @@ Window {
         target: playlist
         function onRepeatModeChanged() { Qt.callLater(root.publishState) }
         function onShuffleChanged() { Qt.callLater(root.publishState) }
-        function onNextIndexChanged() { Qt.callLater(root.publishState) }
+        function onNextIndexChanged() { Qt.callLater(root.publishState); root.syncPrefetch() }
         function onPreviousIndexChanged() { Qt.callLater(root.publishState) }
+        function onItemsChanged() { root.syncPrefetch() }
     }
     Playlist {
         id: playlist
@@ -964,6 +967,18 @@ Window {
                          + " (" + (reasons[reason] || reason) + ")", 6000)
             }
             onFileLoaded: {
+                // mpv a enchaîné de lui-même sur le fichier préchargé : même suite qu'openUrl()
+                if (root.prefetchedUrl !== "" && root.pendingUrl !== root.prefetchedUrl
+                        && video.getProperty("path") === utils.localPath(root.prefetchedUrl)) {
+                    if (root.currentUrl !== "")
+                        history.forget(root.currentUrl) // vu jusqu'au bout
+                    root.currentUrl = ""
+                    root.pendingUrl = root.prefetchedUrl
+                    playlist.load(root.pendingUrl)
+                    root.bookmarks = []
+                    root.osd(utils.fileName(root.pendingUrl))
+                }
+                root.prefetchedUrl = ""
                 root.fitPending = true
                 if (utils.isOnline(root.pendingUrl))
                     Qt.callLater(() => root.osd(video.mediaTitle))
@@ -976,6 +991,7 @@ Window {
                     video.command(["set", "ab-loop-b", "no"])
                 }
                 root.resume()
+                root.syncPrefetch()
             }
         }
 
@@ -1804,7 +1820,28 @@ Window {
         // yt-dlp : moteur JavaScript, et sous-titres de YouTube (automatiques compris) dans ces langues
         video.command(["set", "ytdl-raw-options", utils.ytdlRawOptions(root.jsRuntime, settings.subtitleLanguages)])
         video.command(["set", "sub-scale", String(settings.subtitleScale / 100)])
+        // Enchaînement sans coupure : mpv ouvre le fichier suivant (ajouté à sa propre
+        // playlist par syncPrefetch()) pendant la lecture, et enchaîne sans vider le son
+        video.command(["set", "prefetch-playlist", settings.gaplessPlayback ? "yes" : "no"])
+        video.command(["set", "gapless-audio", "weak"])
+        syncPrefetch()
         applyShaders()
+    }
+
+    // Fichier préchargé par mpv (vide si aucun) ; voir onFileLoaded pour l'enchaînement
+    property string prefetchedUrl: ""
+    function syncPrefetch() {
+        const next = playlist.nextIndex
+        const wanted = settings.gaplessPlayback && video.hasMedia && currentUrl !== "" && next >= 0
+                       && next !== playlist.current && !utils.isOnline(currentUrl)
+                       && !utils.isOnline(playlist.items[next]) ? playlist.items[next] : ""
+        if (wanted === prefetchedUrl)
+            return
+        // playlist-clear garde le fichier en cours et retire le reste
+        video.command(["playlist-clear"])
+        prefetchedUrl = wanted
+        if (wanted !== "")
+            video.command(["loadfile", utils.localPath(wanted), "append"])
     }
 
     Connections {
@@ -1813,6 +1850,7 @@ Window {
         function onAudioLanguagesChanged() { root.applyPlaybackSettings() }
         function onSubtitleLanguagesChanged() { root.applyPlaybackSettings() }
         function onSubtitleScaleChanged() { root.applyPlaybackSettings() }
+        function onGaplessPlaybackChanged() { root.applyPlaybackSettings() }
         function onUpscalerChanged() { root.applyShaders() }
     }
 
